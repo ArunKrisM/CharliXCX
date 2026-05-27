@@ -1,0 +1,2165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>BBC Sounds — Live Discovery Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:'BBC Reith Sans';src:url('https://static.bbc.co.uk/fonts/reith/3.012/BBCReithSans_W_Rg.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;}
+@font-face{font-family:'BBC Reith Sans';src:url('https://static.bbc.co.uk/fonts/reith/3.012/BBCReithSans_W_Bd.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap;}
+@font-face{font-family:'BBC Reith Sans';src:url('https://static.bbc.co.uk/fonts/reith/3.012/BBCReithSans_W_ExBd.woff2') format('woff2');font-weight:800;font-style:normal;font-display:swap;}
+
+:root{
+  --black:#000;--ink:#0a0a0a;--s1:#0f0f0f;--s2:#161616;--s3:#1e1e1e;
+  --border:#252525;--muted:#333;--dim:#666;--grey:#999;--silver:#bbb;--white:#fff;
+  --live:#E53535;--ldim:rgba(229,53,53,.18);
+  --orange:#FF6B00;--o2:#FF8820;--odim:rgba(255,107,0,.13);--oglow:rgba(255,107,0,.28);
+  --amber:#E8A32A;--adim:rgba(232,163,42,.15);
+  --blue:#2962CC;
+  --font-m:'DM Mono','Courier New',monospace;
+  --font-b:'BBC Reith Sans','DM Sans',-apple-system,sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button,input{font-family:var(--font-b);border:none;background:none;cursor:pointer;color:inherit}
+body{background:#050505;min-height:100vh;font-family:var(--font-b);overflow-x:hidden;}
+
+.page-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 0 60px;min-height:100vh;background:#050505;}
+
+/* ─── DEVICE ─────────────────────────────────────────── */
+.device{width:390px;height:844px;background:var(--black);border-radius:50px;overflow:hidden;position:relative;flex-shrink:0;
+  box-shadow:0 0 0 1px #1a1a1a,0 0 0 3px #0d0d0d,0 32px 90px rgba(0,0,0,.95),0 0 60px rgba(255,107,0,.04);}
+
+/* ─── STATUS BAR ─────────────────────────────────────── */
+.sbar{position:absolute;top:0;left:0;right:0;z-index:500;height:48px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 10px;pointer-events:none;}
+.sbar-t{font-size:15px;font-weight:700;color:var(--white);letter-spacing:-.2px;}
+.sbar-i{display:flex;gap:5px;align-items:center;}
+
+/* ─── APPBAR ─────────────────────────────────────────── */
+.appbar{position:absolute;top:48px;left:0;right:0;z-index:400;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,107,0,.08);}
+.bbc-logo{display:flex;gap:3px;}
+.bbc-sq{width:26px;height:26px;border-radius:3px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;}
+.appbar-title{font-size:13px;font-weight:700;color:var(--orange);letter-spacing:.3px;font-family:var(--font-m);}
+.av{width:28px;height:28px;border-radius:50%;background:#1a3a8a;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
+
+/* ─── BOTTOM NAV ─────────────────────────────────────── */
+.bnav{position:absolute;bottom:0;left:0;right:0;z-index:400;height:78px;background:rgba(0,0,0,.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 4px 10px;}
+.bn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0;color:var(--dim);transition:color .15s;position:relative;}
+.bn svg{width:24px;height:24px;}
+.bn span{font-size:10px;font-weight:600;line-height:1;}
+.bn.on{color:var(--orange);}
+/* Live pill — sits at same vertical centre as other icons, no shadow, no halo */
+.bn-pill{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--s2);border:1.5px solid var(--border);border-radius:20px;padding:6px 14px 5px;color:var(--dim);transition:background .15s,color .15s,border-color .15s;box-shadow:none;}
+.bn-pill svg{width:20px;height:20px;}
+.bn-pill span{font-size:10px;font-weight:800;line-height:1;}
+#bn1.on .bn-pill{background:var(--orange);border-color:var(--orange);color:#000;box-shadow:none;}
+.live-dot-nav{position:absolute;top:-2px;right:calc(50% - 18px);width:6px;height:6px;border-radius:50%;background:var(--live);border:1.5px solid var(--black);animation:blink 1.2s infinite;}
+
+/* ─── SCREENS ─────────────────────────────────────────── */
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;background:var(--black);opacity:0;pointer-events:none;transition:opacity .2s var(--ease);}
+.screen.on{opacity:1;pointer-events:all;}
+.screen::-webkit-scrollbar{display:none;}
+
+/* ─── TOAST ─────────────────────────────────────────── */
+.toast{position:absolute;bottom:86px;left:14px;right:14px;background:var(--s3);border:1px solid rgba(255,107,0,.2);border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;z-index:600;opacity:0;transform:translateY(10px);transition:all .22s var(--ease);pointer-events:none;box-shadow:0 8px 28px rgba(0,0,0,.7);}
+.toast.show{opacity:1;transform:translateY(0);}
+.t-i{font-size:18px;flex-shrink:0;}.t-t{font-size:13px;font-weight:700;color:var(--white);}.t-s{font-size:11px;color:var(--dim);margin-top:1px;}
+
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes contextSlide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes orangePulse{0%,100%{box-shadow:0 0 0 0 var(--oglow)}50%{box-shadow:0 0 0 8px transparent}}
+
+/* ══ SHARED COMPONENTS ══ */
+.sh{display:flex;align-items:baseline;justify-content:space-between;padding:18px 18px 10px;}
+.sh h2{font-size:18px;font-weight:800;color:var(--white);letter-spacing:-.3px;}
+.sh .ao{font-size:13px;font-weight:600;color:var(--orange);cursor:pointer;}
+.hscroll{display:flex;gap:10px;padding:0 18px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.hscroll::-webkit-scrollbar{display:none;}
+.div{height:1px;background:var(--border);margin:0 18px;}
+.scroll-end{height:90px;}
+.lp{display:inline-flex;align-items:center;gap:4px;background:var(--live);color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:3px 7px;border-radius:3px;}
+.lp .d{width:5px;height:5px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+
+/* Home stream cards */
+.hs-card{flex-shrink:0;width:138px;cursor:pointer;transition:transform .15s;}
+.hs-card:hover{transform:translateY(-2px);}
+.hs-art{width:138px;height:84px;border-radius:8px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;background:var(--s2);box-shadow:0 0 0 1.5px var(--orange);}
+.hs-art.dim{box-shadow:none;border:1.5px dashed var(--border);}
+.hs-badge{position:absolute;top:5px;left:5px;background:var(--live);color:#fff;font-size:8px;font-weight:800;letter-spacing:.6px;padding:2px 5px;border-radius:3px;display:flex;align-items:center;gap:3px;text-transform:uppercase;}
+.hs-badge .d{width:4px;height:4px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+.hs-badge.amber{background:var(--amber);}
+.hs-badge.grey{background:var(--muted);}
+.hs-count{position:absolute;bottom:4px;right:5px;font-size:9px;font-weight:600;color:rgba(255,255,255,.65);background:rgba(0,0,0,.5);padding:2px 5px;border-radius:3px;}
+.hs-info{padding:6px 2px 0;}
+.hs-station{font-size:9px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;font-family:var(--font-m);}
+.hs-title{font-size:13px;font-weight:700;color:var(--white);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hs-sub{font-size:11px;color:var(--dim);}
+
+/* Flat rows */
+.row{display:flex;align-items:flex-start;gap:13px;padding:10px 18px;cursor:pointer;transition:background .12s;}
+.row:hover{background:var(--s1);}
+.row-art{width:80px;height:80px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--s2);}
+.row-info{flex:1;padding-top:2px;min-width:0;}
+.row-title{font-size:15px;font-weight:800;color:var(--white);margin-bottom:3px;line-height:1.2;}
+.row-sub{font-size:12px;color:var(--grey);line-height:1.4;margin-bottom:4px;}
+.row-play{flex-shrink:0;width:32px;height:32px;border-radius:50%;border:2px solid var(--muted);display:flex;align-items:center;justify-content:center;color:var(--white);margin-top:4px;}
+.row-play svg{width:12px;height:12px;margin-left:2px;}
+.prog-track{height:2px;background:var(--border);border-radius:2px;margin-top:5px;}
+.prog-fill{height:100%;background:var(--orange);border-radius:2px;}
+
+/* ── Cat stream card (Also Live Now) ── */
+.cat-section{margin:0 0 4px;}
+.cat-hd{width:100%;display:flex;align-items:center;gap:8px;padding:12px 18px;cursor:pointer;background:none;border:none;text-align:left;}
+.cat-icon{font-size:16px;}
+.cat-label{font-size:14px;font-weight:800;color:var(--white);flex:1;}
+.cat-count{font-size:11px;color:var(--dim);}
+.cat-chevron{color:var(--dim);transition:transform .2s;}
+.cat-chevron.open{transform:rotate(180deg);}
+.cat-body{padding:0 18px 12px;display:none;}
+.cat-body.open{display:block;}
+.csc{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:opacity .12s;}
+.csc:last-child{border-bottom:none;}
+.csc:hover{opacity:.75;}
+.csc-art{width:40px;height:40px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0;}
+.csc-mid{flex:1;min-width:0;}
+.csc-name{font-size:11px;color:var(--dim);margin-bottom:1px;}
+.csc-show{font-size:13px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.csc-stn{font-size:10px;color:var(--dim);}
+.csc-live{display:inline-flex;align-items:center;gap:3px;background:var(--ldim);color:#ff7070;font-size:8px;font-weight:800;letter-spacing:.6px;padding:3px 6px;border-radius:3px;white-space:nowrap;}
+.csc-live .d{width:4px;height:4px;border-radius:50%;background:#ff7070;animation:blink 1.1s infinite;}
+
+/* ── RAW FEED cards ── */
+.raw-feed-card{flex-shrink:0;width:150px;height:100px;border-radius:10px;overflow:hidden;position:relative;cursor:pointer;}
+.raw-canvas{width:150px;height:100px;display:block;}
+.rfc-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,.85) 100%);display:flex;flex-direction:column;justify-content:space-between;padding:6px;}
+.rfc-top{display:flex;align-items:center;justify-content:space-between;}
+.rfc-live{display:inline-flex;align-items:center;gap:3px;background:rgba(229,53,53,.35);backdrop-filter:blur(4px);color:#fff;font-size:7px;font-weight:800;letter-spacing:.6px;padding:2px 5px;border-radius:3px;text-transform:uppercase;}
+.rfc-live .d{width:4px;height:4px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+.rfc-viewers{font-size:9px;color:rgba(255,255,255,.65);font-family:var(--font-m);}
+.rfc-bottom{}
+.rfc-name{font-size:11px;font-weight:700;color:#fff;line-height:1.2;}
+.rfc-sub{font-size:9px;color:rgba(255,255,255,.5);}
+
+/* ── RAW MODAL (full-screen swipe viewer) ── */
+.raw-modal{position:absolute;inset:0;z-index:800;background:#000;display:none;flex-direction:column;overflow:hidden;}
+.raw-modal.open{display:flex;}
+.raw-slide{position:absolute;inset:0;transition:transform .3s var(--ease);}
+.raw-slide canvas{width:100%;height:100%;display:block;object-fit:cover;}
+.raw-slide-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.4) 0%,transparent 30%,transparent 60%,rgba(0,0,0,.85) 100%);}
+.raw-close{position:absolute;top:64px;left:16px;z-index:10;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15);border-radius:20px;color:#fff;font-size:14px;font-weight:700;padding:6px 12px;cursor:pointer;}
+.raw-slide-bottom{position:absolute;bottom:96px;left:16px;right:60px;}
+.raw-feed-lbl{display:inline-flex;align-items:center;gap:4px;background:rgba(229,53,53,.35);color:#fff;font-size:9px;font-weight:800;letter-spacing:.6px;padding:3px 7px;border-radius:3px;text-transform:uppercase;margin-bottom:6px;}
+.raw-feed-lbl .d{width:4px;height:4px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+.raw-feed-name{font-size:20px;font-weight:900;color:#fff;line-height:1.1;margin-bottom:3px;}
+.raw-feed-sub{font-size:12px;color:rgba(255,255,255,.55);}
+.raw-dots{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:5px;z-index:10;}
+.raw-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.3);transition:all .2s;}
+.raw-dot.on{background:#fff;height:16px;border-radius:2px;}
+.raw-hint{position:absolute;bottom:88px;right:16px;display:flex;flex-direction:column;align-items:center;gap:3px;animation:hintBob 1.5s infinite;}
+@keyframes hintBob{0%,100%{opacity:.6;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+.raw-hint svg{width:20px;height:20px;color:rgba(255,255,255,.7);}
+.raw-hint span{font-size:9px;color:rgba(255,255,255,.5);font-family:var(--font-m);letter-spacing:.5px;}
+.pm-action{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+.pm-action-icon{font-size:26px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5));}
+.pm-action-label{font-size:10px;color:rgba(255,255,255,.6);font-weight:600;}
+
+/* ══════════════════════════════════════════════════
+   SCREEN 1 — LIVE SESSION PLAYER
+══════════════════════════════════════════════════ */
+#s1{padding-top:0;}
+
+/* ── Video/Audio toggle — sits below appbar, inside player area ── */
+.av-toggle{position:absolute;top:100px;right:14px;z-index:10;display:flex;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);border-radius:20px;overflow:hidden;}
+.av-btn{font-size:10px;font-weight:800;letter-spacing:.5px;padding:5px 12px;color:rgba(255,255,255,.45);transition:all .15s;cursor:pointer;font-family:var(--font-m);}
+.av-btn.on{background:var(--orange);color:#fff;}
+
+/* ── Player wrap ── */
+.player-wrap{position:relative;width:100%;height:300px;flex-shrink:0;}
+#player-canvas{width:100%;height:300px;display:block;}
+/* video-mode letterbox overlay */
+.player-vid-frame{position:absolute;inset:0;display:none;align-items:center;justify-content:center;}
+.player-vid-frame.on{display:flex;}
+.vid-screen{width:100%;height:100%;background:#050505;position:relative;overflow:hidden;}
+#vid-canvas{width:100%;height:100%;display:block;}
+.vid-corner-badge{position:absolute;top:68px;left:18px;display:flex;align-items:center;gap:6px;}
+.vid-live{display:flex;align-items:center;gap:4px;background:var(--live);color:#fff;font-size:9px;font-weight:800;letter-spacing:.7px;padding:4px 8px;border-radius:4px;}
+.vid-live .d{width:5px;height:5px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+.vid-cam-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.7);background:rgba(0,0,0,.5);backdrop-filter:blur(6px);padding:4px 8px;border-radius:4px;font-family:var(--font-m);}
+.player-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.3) 0%,transparent 40%,rgba(0,0,0,.7) 80%,rgba(0,0,0,.95) 100%);}
+.player-top{position:absolute;top:100px;left:0;right:130px;padding:0 18px;display:flex;align-items:center;}
+.station-badge{display:flex;align-items:center;gap:8px;}
+.stn-logo{background:var(--orange);color:#fff;font-size:11px;font-weight:900;padding:4px 8px;border-radius:4px;letter-spacing:.3px;line-height:1.3;}
+.stn-info{display:flex;flex-direction:column;}
+.stn-name{font-size:12px;font-weight:700;color:rgba(255,255,255,.9);}
+.stn-prog{font-size:10px;color:rgba(255,255,255,.5);}
+.live-chip{display:flex;align-items:center;gap:4px;background:var(--live);color:#fff;font-size:9px;font-weight:800;letter-spacing:.7px;padding:4px 8px;border-radius:4px;}
+.live-chip .d{width:5px;height:5px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+.player-bottom{position:absolute;bottom:0;left:0;right:0;padding:0 18px 16px;}
+.now-label{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-m);margin-bottom:4px;}
+.now-title{font-size:24px;font-weight:900;color:#fff;line-height:1.05;letter-spacing:-.5px;margin-bottom:2px;}
+.now-sub{font-size:13px;color:rgba(255,255,255,.55);margin-bottom:12px;}
+.progress-wrap{position:relative;height:3px;background:rgba(255,255,255,.12);border-radius:2px;margin-bottom:10px;cursor:pointer;}
+.progress-fill{height:100%;background:var(--orange);border-radius:2px;width:34%;transition:width .5s linear;}
+.progress-dot{position:absolute;top:50%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:var(--orange);margin-left:-6px;left:34%;box-shadow:0 0 0 3px rgba(255,107,0,.3);}
+.player-controls{display:flex;align-items:center;justify-content:space-between;}
+.ctrl-skip{background:none;color:rgba(255,255,255,.6);font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--font-m);}
+.ctrl-skip svg{width:22px;height:22px;}
+.ctrl-play{width:52px;height:52px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;transition:transform .1s;}
+.ctrl-play:active{transform:scale(.94);}
+.ctrl-play svg{width:22px;height:22px;color:#000;margin-left:3px;}
+.ctrl-clip{background:none;color:rgba(255,255,255,.55);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--font-m);}
+.ctrl-clip svg{width:22px;height:22px;}
+.ctrl-clip.clipped{color:var(--orange);}
+.ctrl-vol{background:none;color:rgba(255,255,255,.55);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--font-m);}
+.ctrl-vol svg{width:22px;height:22px;}
+
+/* ── Context surface ── */
+.context-surface{background:var(--s1);border-top:2px solid var(--orange);padding:14px 18px 16px;animation:contextSlide .4s var(--ease);}
+.ctx-eyebrow{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--orange);margin-bottom:8px;display:flex;align-items:center;gap:6px;font-family:var(--font-m);}
+.ctx-eyebrow::after{content:'';flex:1;height:1px;background:rgba(255,107,0,.15);}
+.ctx-title{font-size:16px;font-weight:800;color:var(--white);margin-bottom:3px;letter-spacing:-.2px;}
+.ctx-sub{font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.4;}
+.ctx-cards{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px;}
+.ctx-cards::-webkit-scrollbar{display:none;}
+.ctx-card{flex-shrink:0;width:156px;border-radius:10px;overflow:hidden;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:border-color .15s,transform .15s;}
+.ctx-card:hover{border-color:rgba(255,107,0,.3);transform:translateY(-1px);}
+.ctx-card-art{width:100%;height:88px;position:relative;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.ctx-card-type{position:absolute;top:6px;left:6px;font-size:8px;font-weight:800;letter-spacing:.6px;padding:2px 6px;border-radius:3px;text-transform:uppercase;}
+.ctx-card-type.video{background:rgba(229,53,53,.25);color:#ff7070;}
+.ctx-card-type.audio{background:rgba(255,107,0,.2);color:var(--orange);}
+.ctx-card-type.podcast{background:rgba(41,98,204,.25);color:#6da4ff;}
+.ctx-card-dur{position:absolute;bottom:6px;right:6px;font-size:9px;font-weight:600;color:rgba(255,255,255,.6);background:rgba(0,0,0,.5);padding:2px 5px;border-radius:3px;font-family:var(--font-m);}
+.ctx-card-info{padding:8px 10px 10px;}
+.ctx-card-station{font-size:9px;font-weight:700;color:var(--orange);margin-bottom:2px;font-family:var(--font-m);letter-spacing:.4px;}
+.ctx-card-title{font-size:12px;font-weight:700;color:var(--white);line-height:1.3;}
+.ctx-card-sub{font-size:10px;color:var(--dim);margin-top:2px;}
+
+/* ── Who is this ── */
+.who-card{margin:14px 18px 0;background:linear-gradient(135deg,#110500,#1a0800);border:1px solid rgba(255,107,0,.2);border-radius:14px;padding:14px 16px;animation:slideUp .35s var(--ease);transition:border-color .15s;}
+.who-card:hover{border-color:rgba(255,107,0,.4);}
+.who-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.who-icon{width:40px;height:40px;border-radius:10px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.who-label{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;font-family:var(--font-m);}
+.who-name{font-size:16px;font-weight:900;color:var(--white);letter-spacing:-.3px;}
+.who-text{font-size:12px;color:rgba(255,255,255,.65);line-height:1.55;margin-bottom:12px;}
+.who-cta{display:flex;align-items:center;justify-content:space-between;}
+.who-btn{background:var(--orange);color:#000;font-size:12px;font-weight:800;padding:8px 16px;border-radius:20px;transition:transform .1s;}
+.who-btn:active{transform:scale(.96);}
+.who-dismiss{font-size:12px;color:var(--dim);font-weight:600;cursor:pointer;}
+
+/* ── Trivia card ── */
+.trivia-card{margin:14px 18px 0;background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:0 12px 12px 0;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;animation:slideUp .35s var(--ease);position:relative;}
+.trivia-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.trivia-body{flex:1;}
+.trivia-label{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;font-family:var(--font-m);}
+.trivia-text{font-size:12px;color:rgba(255,255,255,.75);line-height:1.5;}
+.trivia-dismiss{position:absolute;top:10px;right:12px;font-size:16px;color:var(--dim);cursor:pointer;line-height:1;}
+
+/* ── Moment panel ── */
+.moment-panel{margin:14px 18px 0;background:linear-gradient(135deg,#1a0800,#111);border:1px solid rgba(255,107,0,.25);border-radius:14px;padding:14px 16px;display:none;}
+.moment-panel.visible{display:block;animation:slideUp .3s var(--ease);}
+.moment-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.moment-label{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-m);}
+.moment-time{font-size:12px;font-weight:700;color:var(--white);font-family:var(--font-m);}
+.moment-desc{font-size:13px;font-weight:800;color:var(--white);margin-bottom:10px;}
+.moment-sub{font-size:11px;color:var(--dim);margin-bottom:12px;}
+.moment-actions{display:flex;gap:8px;}
+.moment-save{background:var(--orange);color:#000;font-size:12px;font-weight:800;padding:8px 18px;border-radius:20px;flex:1;text-align:center;cursor:pointer;}
+.moment-share{background:var(--s3);color:var(--white);font-size:12px;font-weight:700;padding:8px 18px;border-radius:20px;border:1px solid var(--border);flex:1;text-align:center;cursor:pointer;}
+
+/* ── Song explorer / setlist ── */
+.song-explorer{margin:14px 18px 0;}
+.se-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.se-title{font-size:14px;font-weight:800;color:var(--white);}
+.se-badge{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:.8px;text-transform:uppercase;font-family:var(--font-m);}
+.se-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
+.se-card:hover{border-color:rgba(255,107,0,.25);}
+.se-track-num{font-size:10px;font-weight:700;color:var(--dim);font-family:var(--font-m);margin-bottom:2px;}
+.se-track-name{font-size:14px;font-weight:800;color:var(--white);margin-bottom:2px;}
+.se-track-fact{font-size:11px;color:rgba(255,255,255,.45);line-height:1.4;}
+.se-play-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.se-play-btn{background:rgba(255,107,0,.12);color:var(--orange);font-size:11px;font-weight:700;padding:5px 12px;border-radius:12px;display:flex;align-items:center;gap:5px;}
+.se-play-btn svg{width:12px;height:12px;}
+.se-dur{font-size:10px;color:var(--dim);font-family:var(--font-m);}
+
+/* ── Post-session card ── */
+.post-card{margin:14px 18px 0;background:linear-gradient(135deg,#1a0800,#0f0500);border:1.5px solid rgba(255,107,0,.3);border-radius:16px;overflow:hidden;display:none;}
+.post-card.visible{display:block;animation:slideUp .4s var(--ease);}
+.post-art{width:100%;height:140px;position:relative;}
+#post-canvas{width:100%;height:140px;display:block;}
+.post-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;}
+.post-check{width:48px;height:48px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:4px;}
+.post-you-were{font-size:16px;font-weight:900;color:#fff;letter-spacing:-.3px;}
+.post-there{font-size:16px;font-weight:900;color:var(--orange);letter-spacing:-.3px;}
+.post-body{padding:14px 16px;}
+.post-stat-row{display:flex;gap:8px;margin-bottom:14px;}
+.post-stat{flex:1;background:rgba(255,107,0,.08);border-radius:10px;padding:10px;text-align:center;}
+.post-stat-num{font-size:20px;font-weight:900;color:var(--orange);line-height:1;font-family:var(--font-m);}
+.post-stat-label{font-size:9px;color:var(--dim);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+.post-moments-label{font-size:11px;font-weight:700;color:var(--white);margin-bottom:8px;}
+.post-moment-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(255,107,0,.1);border:1px solid rgba(255,107,0,.2);border-radius:20px;padding:5px 10px;font-size:11px;color:var(--orange);font-family:var(--font-m);margin:0 6px 6px 0;}
+.post-onward-label{font-size:11px;font-weight:700;color:var(--white);margin:12px 0 8px;}
+.post-onward-cards{display:flex;gap:8px;}
+.poc{flex:1;background:var(--s3);border-radius:10px;padding:10px;cursor:pointer;border:1px solid var(--border);transition:border-color .15s;}
+.poc:hover{border-color:rgba(255,107,0,.3);}
+.poc-icon{font-size:18px;margin-bottom:4px;}
+.poc-title{font-size:12px;font-weight:700;color:var(--white);line-height:1.2;margin-bottom:2px;}
+.poc-sub{font-size:10px;color:var(--dim);}
+.post-share-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--orange);color:#000;font-size:14px;font-weight:800;padding:13px;border-radius:12px;margin-top:12px;cursor:pointer;transition:transform .1s;}
+.post-share-btn:active{transform:scale(.97);}
+
+/* ══ SCREEN 2 — EXPLORE ══ */
+#s2{padding-top:96px;}
+.disc-pill-row{display:flex;gap:6px;padding:0 18px;overflow-x:auto;scrollbar-width:none;margin-bottom:8px;}
+.disc-pill-row::-webkit-scrollbar{display:none;}
+.disc-pill{font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;background:var(--s2);color:var(--grey);border:1px solid var(--border);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;}
+.disc-pill.on{background:var(--odim);color:var(--orange);border-color:rgba(255,107,0,.3);}
+.artist-strip{padding:0 18px;margin-bottom:14px;}
+.as-art{width:100%;height:160px;border-radius:14px;position:relative;overflow:hidden;margin-bottom:10px;}
+#as-canvas{width:100%;height:160px;display:block;}
+.as-overlay{position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.8) 0%,transparent 60%);padding:16px;}
+.as-tag{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-m);margin-bottom:4px;}
+.as-name{font-size:28px;font-weight:900;color:#fff;line-height:1;letter-spacing:-.5px;}
+.as-year{font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;}
+
+/* ══ SCREEN 3 — MY SOUNDS ══ */
+#s3{padding-top:96px;}
+.archive-card{margin:0 18px 12px;background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s;}
+.archive-card:hover{border-color:rgba(255,107,0,.25);}
+.archive-art{width:100%;height:100px;position:relative;}
+#ac-canvas{width:100%;height:100px;display:block;}
+.archive-art-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent,rgba(0,0,0,.8));display:flex;align-items:flex-end;padding:10px 12px;}
+.archive-you-were{font-size:13px;font-weight:800;color:var(--white);}
+.archive-you-were span{color:var(--orange);}
+.archive-body{padding:12px 14px;}
+.archive-title{font-size:15px;font-weight:800;color:var(--white);margin-bottom:3px;}
+.archive-meta{font-size:11px;color:var(--dim);margin-bottom:10px;}
+.archive-moments{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.arc-moment{font-size:10px;font-family:var(--font-m);color:var(--orange);background:rgba(255,107,0,.08);border:1px solid rgba(255,107,0,.15);border-radius:12px;padding:3px 9px;}
+.archive-actions{display:flex;gap:8px;}
+.arc-btn{flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;}
+.arc-btn.primary{background:var(--orange);color:#000;}
+.arc-btn.secondary{background:var(--s3);color:var(--white);border:1px solid var(--border);}
+.saved-item{display:flex;align-items:center;gap:12px;padding:12px 18px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--border);}
+.saved-item:hover{background:var(--s1);}
+.si-art{width:56px;height:56px;border-radius:8px;background:var(--s2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.si-info{flex:1;}
+.si-title{font-size:14px;font-weight:700;color:var(--white);margin-bottom:2px;}
+.si-sub{font-size:11px;color:var(--dim);}
+.si-type{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:.5px;text-transform:uppercase;font-family:var(--font-m);margin-bottom:3px;}
+
+/* ══ SCREEN 4 — SEARCH ══ */
+#s4{padding-top:96px;}
+.search-wrap{padding:0 18px 16px;}
+.search-box{display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:16px;}
+.search-box input{flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--white);font-family:var(--font-b);}
+.search-box input::placeholder{color:var(--dim);}
+.search-box svg{width:18px;height:18px;color:var(--dim);}
+.trending-label{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;font-family:var(--font-m);}
+.trend-chip{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;background:var(--s2);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--white);cursor:pointer;margin:0 6px 8px 0;transition:border-color .15s;}
+.trend-chip:hover{border-color:rgba(255,107,0,.3);}
+.trend-chip.hot{border-color:rgba(255,107,0,.2);color:var(--orange);}
+
+/* ══════════════════════════════════════════════════
+   MAGAZINE / IMMERSION LAYER
+══════════════════════════════════════════════════ */
+.mag-wrap{margin:18px 0 0;}
+.mag-header{padding:0 18px 10px;display:flex;align-items:baseline;justify-content:space-between;}
+.mag-header-title{font-size:15px;font-weight:800;color:var(--white);letter-spacing:-.2px;}
+.mag-header-sub{font-size:11px;color:var(--dim);}
+.mag-tabs{display:flex;gap:0;padding:0 18px;margin-bottom:0;border-bottom:1px solid var(--border);}
+.mag-tab{font-size:12px;font-weight:700;color:var(--dim);padding:10px 14px 9px;cursor:pointer;position:relative;transition:color .15s;white-space:nowrap;flex-shrink:0;}
+.mag-tab.on{color:var(--orange);}
+.mag-tab.on::after{content:'';position:absolute;bottom:-1px;left:14px;right:14px;height:2px;background:var(--orange);border-radius:2px;}
+.mag-panel{display:none;padding:0;}
+.mag-panel.on{display:block;}
+.mag-eyebrow{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--orange);font-family:var(--font-m);display:flex;align-items:center;gap:6px;padding:14px 18px 10px;}
+.mag-eyebrow::after{content:'';flex:1;height:1px;background:rgba(255,107,0,.12);}
+
+/* Article hero */
+.art-hero{margin:0 18px 4px;border-radius:14px;overflow:hidden;cursor:pointer;background:var(--s2);border:1px solid var(--border);transition:border-color .15s;}
+.art-hero:hover{border-color:rgba(255,107,0,.3);}
+.art-hero-img{width:100%;height:150px;display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;}
+.art-hero-canvas{position:absolute;inset:0;width:100%;height:100%;}
+.art-hero-tag{position:absolute;top:10px;left:10px;font-size:8px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:3px 8px;border-radius:3px;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);color:rgba(255,255,255,.9);}
+.art-hero-body{padding:14px 16px;}
+.art-hero-source{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:.5px;text-transform:uppercase;font-family:var(--font-m);margin-bottom:5px;}
+.art-hero-title{font-size:17px;font-weight:900;color:var(--white);line-height:1.25;letter-spacing:-.3px;margin-bottom:6px;}
+.art-hero-deck{font-size:12px;color:var(--grey);line-height:1.6;margin-bottom:10px;}
+.art-hero-meta{display:flex;align-items:center;justify-content:space-between;}
+.art-hero-byline{font-size:10px;color:var(--dim);}
+.art-read{font-size:11px;font-weight:700;color:var(--orange);}
+
+/* Article strip */
+.art-strip{display:flex;align-items:flex-start;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
+.art-strip:hover{background:var(--s1);}
+.art-strip-img{width:68px;height:68px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--s2);}
+.art-strip-body{flex:1;min-width:0;}
+.art-strip-source{font-size:9px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font-m);margin-bottom:3px;}
+.art-strip-title{font-size:13px;font-weight:800;color:var(--white);line-height:1.3;margin-bottom:3px;}
+.art-strip-meta{font-size:10px;color:var(--dim);}
+
+/* Interview cards */
+.iv-card{margin:0 18px 10px;background:var(--s2);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s,transform .12s;}
+.iv-card:hover{border-color:rgba(255,107,0,.3);transform:translateY(-1px);}
+.iv-header{display:flex;align-items:center;gap:12px;padding:14px 14px 10px;}
+.iv-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:2px solid var(--border);}
+.iv-meta{flex:1;}
+.iv-programme{font-size:9px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font-m);margin-bottom:2px;}
+.iv-title{font-size:13px;font-weight:800;color:var(--white);line-height:1.3;}
+.iv-date{font-size:10px;color:var(--dim);}
+.iv-type{font-size:9px;font-weight:700;padding:3px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;}
+.iv-type.audio{background:rgba(255,107,0,.15);color:var(--orange);}
+.iv-type.video{background:rgba(229,53,53,.15);color:#ff7070;}
+.iv-type.text{background:rgba(41,98,204,.15);color:#6da4ff;}
+.iv-excerpt{padding:0 14px 12px;font-size:12px;color:var(--dim);line-height:1.55;border-top:1px solid rgba(255,255,255,.04);padding-top:10px;}
+.iv-footer{display:flex;align-items:center;justify-content:space-between;padding:0 14px 12px;}
+.iv-dur{font-size:10px;color:var(--dim);font-family:var(--font-m);}
+.iv-cta{font-size:11px;font-weight:700;color:var(--orange);}
+
+/* Audiobook panel */
+.ab-hero{margin:0 18px 12px;background:linear-gradient(135deg,#180800,#0e0400);border:1px solid rgba(255,107,0,.15);border-radius:16px;overflow:hidden;cursor:pointer;transition:border-color .15s;}
+.ab-hero:hover{border-color:rgba(255,107,0,.35);}
+.ab-cover-row{display:flex;align-items:flex-start;gap:14px;padding:16px 16px 12px;}
+.ab-cover{width:76px;height:76px;border-radius:10px;background:linear-gradient(135deg,#2a1000,#180a00);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;border:1px solid rgba(255,107,0,.2);box-shadow:0 8px 20px rgba(0,0,0,.5);}
+.ab-info{flex:1;}
+.ab-label{font-size:9px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font-m);margin-bottom:4px;}
+.ab-title{font-size:15px;font-weight:900;color:var(--white);line-height:1.2;letter-spacing:-.3px;margin-bottom:2px;}
+.ab-author{font-size:11px;color:var(--dim);margin-bottom:6px;}
+.ab-stars{font-size:11px;letter-spacing:1px;color:var(--orange);}
+.ab-desc{padding:0 16px 12px;font-size:12px;color:rgba(255,255,255,.5);line-height:1.6;}
+.ab-progress-row{padding:0 16px 10px;}
+.ab-prog-label{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:5px;font-family:var(--font-m);}
+.ab-prog-bar{height:3px;background:var(--border);border-radius:2px;}
+.ab-prog-fill{height:100%;width:38%;background:var(--orange);border-radius:2px;}
+.ab-actions{display:flex;gap:8px;padding:0 16px 14px;}
+.ab-play-btn{flex:1;background:var(--orange);color:#000;font-size:12px;font-weight:800;padding:9px;border-radius:10px;text-align:center;cursor:pointer;}
+.ab-save-btn{background:var(--s3);color:var(--white);font-size:12px;font-weight:700;padding:9px 14px;border-radius:10px;border:1px solid var(--border);cursor:pointer;}
+.ab-chapters{margin:0 18px 12px;background:var(--s2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.ab-ch-header{padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:800;color:var(--white);}
+.ab-ch{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
+.ab-ch:hover{background:var(--s1);}
+.ab-ch:last-child{border-bottom:none;}
+.ab-ch-num{font-size:10px;font-weight:700;color:var(--dim);font-family:var(--font-m);width:20px;flex-shrink:0;}
+.ab-ch-info{flex:1;}
+.ab-ch-title{font-size:12px;font-weight:700;color:var(--white);margin-bottom:1px;}
+.ab-ch-sub{font-size:10px;color:var(--dim);}
+.ab-ch-dur{font-size:10px;color:var(--dim);font-family:var(--font-m);}
+.ab-ch-play{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--grey);}
+.ab-ch-play svg{width:10px;height:10px;margin-left:2px;}
+.ab-ch.current .ab-ch-title{color:var(--orange);}
+.ab-ch.current .ab-ch-play{border-color:var(--orange);color:var(--orange);}
+
+/* Article full-screen modal */
+.article-modal{position:absolute;inset:0;z-index:700;background:var(--black);overflow-y:auto;overflow-x:hidden;display:none;scrollbar-width:none;}
+.article-modal::-webkit-scrollbar{display:none;}
+.article-modal.open{display:block;animation:slideUp .25s var(--ease);}
+.am-hero-img{width:100%;height:200px;position:relative;display:flex;align-items:center;justify-content:center;}
+.am-hero-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.am-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.15),rgba(0,0,0,.92));}
+.am-hero-content{position:absolute;bottom:0;left:0;right:0;padding:16px 20px;}
+.am-tag{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-m);margin-bottom:6px;}
+.am-title{font-size:21px;font-weight:900;color:#fff;line-height:1.15;letter-spacing:-.4px;}
+.am-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);}
+.am-byline{font-size:11px;color:var(--dim);}
+.am-close{font-size:12px;font-weight:700;color:var(--orange);cursor:pointer;padding:5px 10px;border-radius:8px;background:rgba(255,107,0,.08);border:1px solid rgba(255,107,0,.15);}
+.am-body{padding:20px 20px 16px;font-size:13px;color:rgba(255,255,255,.72);line-height:1.78;}
+.am-body p{margin-bottom:15px;}
+.am-body h3{font-size:15px;font-weight:800;color:var(--white);margin:20px 0 9px;letter-spacing:-.2px;}
+.am-body blockquote{border-left:3px solid var(--orange);padding:10px 14px;margin:15px 0;color:rgba(255,255,255,.55);font-style:italic;font-size:12px;line-height:1.65;background:rgba(255,107,0,.04);border-radius:0 8px 8px 0;}
+.am-pull{font-size:17px;font-weight:800;color:var(--white);line-height:1.4;letter-spacing:-.3px;margin:20px 0;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.am-related{margin:0 20px 16px;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.am-rel-label{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-m);margin-bottom:10px;}
+.am-rel-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.am-rel-item:last-child{border-bottom:none;padding-bottom:0;}
+.am-rel-icon{font-size:18px;width:34px;height:34px;border-radius:6px;background:var(--s3);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.am-rel-title{font-size:12px;font-weight:700;color:var(--white);}
+.am-rel-sub{font-size:10px;color:var(--dim);}
+/* Mini player that floats while reading */
+.am-mini-player{position:sticky;bottom:0;left:0;right:0;background:rgba(14,4,0,.94);backdrop-filter:blur(14px);border-top:1px solid rgba(255,107,0,.2);padding:10px 16px;display:flex;align-items:center;gap:10px;}
+.amp-art{width:34px;height:34px;border-radius:6px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.amp-info{flex:1;min-width:0;}
+.amp-track{font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.amp-station{font-size:9px;color:var(--dim);}
+.amp-play{width:30px;height:30px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
+.amp-play svg{width:11px;height:11px;color:#000;margin-left:2px;}
+.am-close-bottom{display:flex;align-items:center;justify-content:center;padding:16px 20px 24px;}
+.am-close-bottom button{background:var(--s2);color:var(--grey);font-size:13px;font-weight:700;padding:10px 24px;border-radius:20px;border:1px solid var(--border);cursor:pointer;}
+
+/* ── PLAY ALONG — polls, quizzes, predictions ── */
+.pa-card{margin:0 18px 12px;background:var(--s2);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.pa-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;}
+.pa-eyebrow{font-size:9px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.8px;font-family:var(--font-m);}
+.pa-count{font-size:10px;color:var(--dim);}
+.pa-q{font-size:14px;font-weight:800;color:var(--white);line-height:1.35;padding:0 16px 12px;}
+.pa-options{padding:0 16px 14px;display:flex;flex-direction:column;gap:7px;}
+.pa-opt{position:relative;border-radius:10px;overflow:hidden;cursor:pointer;border:1.5px solid var(--border);background:var(--s3);transition:border-color .15s;}
+.pa-opt:hover{border-color:rgba(255,107,0,.3);}
+.pa-opt.voted{border-color:rgba(255,107,0,.35);pointer-events:none;}
+.pa-opt.voted.winner{border-color:var(--orange);}
+.pa-bar{position:absolute;top:0;left:0;bottom:0;width:0;background:rgba(255,107,0,.12);transition:width .7s var(--ease);}
+.pa-opt.voted.winner .pa-bar{background:rgba(255,107,0,.2);}
+.pa-opt-inner{position:relative;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;}
+.pa-opt-label{font-size:13px;font-weight:700;color:var(--white);}
+.pa-opt-pct{font-size:12px;font-weight:700;color:var(--orange);opacity:0;transition:opacity .4s .3s;}
+.pa-opt.voted .pa-opt-pct{opacity:1;}
+.pa-opt-tick{font-size:14px;opacity:0;transition:opacity .3s .3s;}
+.pa-opt.voted.winner .pa-opt-tick{opacity:1;}
+.pa-footer{padding:0 16px 14px;display:flex;align-items:center;justify-content:space-between;}
+.pa-voters{font-size:10px;color:var(--dim);}
+.pa-live-tag{display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;color:var(--live);letter-spacing:.5px;font-family:var(--font-m);}
+.pa-live-tag .d{width:4px;height:4px;border-radius:50%;background:var(--live);animation:blink 1.1s infinite;}
+/* Quiz */
+.quiz-card{margin:0 18px 12px;background:var(--s2);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.quiz-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;}
+.quiz-eyebrow{font-size:9px;font-weight:700;color:#6da4ff;text-transform:uppercase;letter-spacing:.8px;font-family:var(--font-m);}
+.quiz-prog-dots{display:flex;gap:4px;}
+.quiz-prog-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .2s;}
+.quiz-prog-dot.done{background:var(--orange);}
+.quiz-prog-dot.cur{background:var(--white);}
+.quiz-q{font-size:14px;font-weight:800;color:var(--white);line-height:1.35;padding:0 16px 12px;}
+.quiz-opts{padding:0 16px 10px;display:flex;flex-direction:column;gap:6px;}
+.quiz-opt{padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--s3);cursor:pointer;font-size:13px;font-weight:700;color:var(--white);transition:all .15s;text-align:left;width:100%;}
+.quiz-opt:hover:not(:disabled){border-color:rgba(255,255,255,.25);}
+.quiz-opt.correct{border-color:#4caf50;background:rgba(76,175,80,.1);color:#7ed87f;}
+.quiz-opt.wrong{border-color:var(--live);background:rgba(229,53,53,.08);color:#ff7070;}
+.quiz-opt:disabled{pointer-events:none;}
+.quiz-explain{margin:0 16px 12px;padding:10px 12px;background:rgba(255,107,0,.06);border-radius:8px;border-left:3px solid var(--orange);font-size:11px;color:rgba(255,255,255,.65);line-height:1.55;display:none;}
+.quiz-explain.show{display:block;}
+.quiz-footer{padding:2px 16px 14px;display:flex;align-items:center;justify-content:space-between;}
+.quiz-score{font-size:11px;color:var(--dim);}
+.quiz-next{font-size:12px;font-weight:800;color:var(--orange);cursor:pointer;padding:6px 14px;border-radius:20px;background:rgba(255,107,0,.1);border:1px solid rgba(255,107,0,.2);display:none;}
+.quiz-next.show{display:inline-block;}
+/* Prediction */
+.pred-card{margin:0 18px 12px;background:linear-gradient(135deg,#180800,#0e0400);border:1px solid rgba(255,107,0,.2);border-radius:14px;padding:14px 16px;}
+.pred-eyebrow{font-size:9px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.8px;font-family:var(--font-m);margin-bottom:6px;}
+.pred-q{font-size:14px;font-weight:800;color:var(--white);line-height:1.35;margin-bottom:12px;}
+.pred-opts{display:flex;gap:8px;flex-wrap:wrap;}
+.pred-opt{padding:9px 16px;border-radius:22px;border:1.5px solid var(--border);background:var(--s3);font-size:12px;font-weight:700;color:var(--white);cursor:pointer;transition:all .15s;}
+.pred-opt:hover{border-color:rgba(255,107,0,.4);}
+.pred-opt.chosen{background:var(--orange);border-color:var(--orange);color:#000;pointer-events:none;}
+.pred-footer{margin-top:10px;font-size:10px;color:var(--dim);}
+/* Setlist vote */
+.setlist-vote{margin:0 18px 12px;background:var(--s2);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.sv-header{padding:12px 14px 8px;border-bottom:1px solid var(--border);}
+.sv-title{font-size:13px;font-weight:800;color:var(--white);}
+.sv-sub{font-size:11px;color:var(--dim);margin-top:2px;}
+.sv-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
+.sv-item:last-child{border-bottom:none;}
+.sv-item:hover{background:var(--s1);}
+.sv-num{font-size:11px;font-weight:700;color:var(--dim);font-family:var(--font-m);width:18px;flex-shrink:0;}
+.sv-name{flex:1;font-size:13px;font-weight:700;color:var(--white);}
+.sv-heart{font-size:18px;transition:transform .2s;}
+.sv-item.hearted .sv-heart{transform:scale(1.25);}
+.sv-item.hearted .sv-name{color:var(--orange);}
+.sv-count{font-size:11px;color:var(--dim);font-family:var(--font-m);min-width:28px;text-align:right;transition:color .2s;}
+.sv-item.hearted .sv-count{color:var(--orange);}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+<div class="device">
+
+  <!-- Status Bar -->
+  <div class="sbar">
+    <span class="sbar-t">9:41</span>
+    <div class="sbar-i">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="1" width="2" height="11" rx="1" opacity=".35"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><path d="M8 2.4C10.5 2.4 12.7 3.5 14.2 5.2L15.5 3.9C13.6 1.8 11 .6 8 .6S2.4 1.8.5 3.9L1.8 5.2C3.3 3.5 5.5 2.4 8 2.4z"/><path d="M8 5.6c1.5 0 2.9.6 3.9 1.6L13.2 6C11.8 4.7 10 3.9 8 3.9S4.2 4.7 2.8 6L4.1 7.2C5.1 6.2 6.5 5.6 8 5.6z"/><circle cx="8" cy="10" r="1.5"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="22" height="11" rx="3.5" stroke="white" stroke-opacity=".35"/><rect x="1.5" y="1.5" width="19" height="9" rx="2.5" fill="white"/><path d="M23.5 4.5v3a1.5 1.5 0 000-3z" fill="white" fill-opacity=".4"/></svg>
+    </div>
+  </div>
+
+  <!-- Appbar -->
+  <div class="appbar" id="appbar">
+    <div class="bbc-logo"><div class="bbc-sq">B</div><div class="bbc-sq">B</div><div class="bbc-sq">C</div></div>
+    <span class="appbar-title">SOUNDS</span>
+    <div class="av">AK</div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="tst"><div class="t-i" id="ti">✅</div><div><div class="t-t" id="tt"></div><div class="t-s" id="ts"></div></div></div>
+
+  <!-- ══════════════ SCREEN 0: HOME ══════════════ -->
+  <div class="screen on" id="s0" onscroll="handleScroll(this)">
+    <!-- Hero -->
+    <div style="padding-top:96px;">
+    <div style="position:relative;margin:0 14px;border-radius:16px;overflow:hidden;cursor:pointer;" onclick="goNav(1)">
+      <canvas id="hero-canvas" style="width:100%;height:200px;display:block;border-radius:16px;"></canvas>
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(0,0,0,.92) 100%);padding:14px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:16px;">
+        <div class="lp" style="margin-bottom:8px;width:fit-content;"><span class="d"></span>Live Now</div>
+        <div style="font-size:11px;font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:3px;font-family:var(--font-m);">Radio 1 · Live Lounge</div>
+        <div style="font-size:22px;font-weight:900;color:#fff;line-height:1.1;letter-spacing:-.5px;margin-bottom:2px;">Charli XCX</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.6);">Live Lounge Session · Performing now · 47k listening</div>
+      </div>
+      <div style="position:absolute;top:14px;right:14px;width:42px;height:42px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;animation:orangePulse 2s infinite;">
+        <svg viewBox="0 0 24 24" fill="#000" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </div>
+    </div>
+
+    <!-- Live Now stations -->
+    <div class="sh"><h2>Live Now</h2><span class="ao" onclick="toast('📡 All stations','See every BBC station live now')">See all</span></div>
+    <div class="hscroll">
+      <div class="hs-card" onclick="goNav(1)">
+        <div class="hs-art" style="background:linear-gradient(135deg,#1a0a2e,#3a0a5e);font-size:20px;font-weight:900;">1<div class="hs-badge"><span class="d"></span>Live</div><div class="hs-count">47k</div></div>
+        <div class="hs-info"><div class="hs-station">Radio 1</div><div class="hs-title">Live Lounge</div><div class="hs-sub">Charli XCX · Now</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','6 Music — Mary Anne Hobbs')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#1a0a2e,#4a0a6e);font-size:20px;font-weight:900;">6<div class="hs-badge"><span class="d"></span>Live</div><div class="hs-count">18k</div></div>
+        <div class="hs-info"><div class="hs-station">6 Music</div><div class="hs-title">Mary Anne Hobbs</div><div class="hs-sub">Breakfast · Now</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','Radio 2 — Scott Mills')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#1a1206,#3a2a08);font-size:20px;font-weight:900;">2<div class="hs-badge"><span class="d"></span>Live</div><div class="hs-count">22k</div></div>
+        <div class="hs-info"><div class="hs-station">Radio 2</div><div class="hs-title">Scott Mills</div><div class="hs-sub">Daytime · Now</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','Radio 4 — The Archers Omnibus')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#2a1a40,#4a2a70);font-size:20px;font-weight:900;">4<div class="hs-badge"><span class="d"></span>Live</div><div class="hs-count">31k</div></div>
+        <div class="hs-info"><div class="hs-station">Radio 4</div><div class="hs-title">The Archers Omnibus</div><div class="hs-sub">Drama · Now</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','Radio 5 Live — 5 Live Sport')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#1a2a1a,#2a5a2a);font-size:18px;font-weight:900;">5L<div class="hs-badge"><span class="d"></span>Live</div><div class="hs-count">14k</div></div>
+        <div class="hs-info"><div class="hs-station">Radio 5 Live</div><div class="hs-title">5 Live Sport</div><div class="hs-sub">The Ashes Day 3</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','Asian Network — Bobby Friction')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#2a0a1a,#5a1a3a);font-size:14px;font-weight:900;letter-spacing:-.5px;">Asian<div class="hs-badge"><span class="d"></span>Live</div><div class="hs-count">9k</div></div>
+        <div class="hs-info"><div class="hs-station">Asian Network</div><div class="hs-title">Bobby Friction</div><div class="hs-sub">Desi Music · Now</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('⏰ Starting soon','Radio 1Xtra — Charlie Sloth · 12:00')">
+        <div class="hs-art dim" style="background:var(--s2);font-size:16px;font-weight:900;color:var(--dim);">1X<div class="hs-badge grey">Soon</div><div class="hs-count" style="color:var(--orange);">12:00</div></div>
+        <div class="hs-info"><div class="hs-station">Radio 1Xtra</div><div class="hs-title">Charlie Sloth</div><div class="hs-sub">Hip Hop · 12:00</div></div>
+      </div>
+    </div>
+
+    <!-- Sport live collapsible -->
+    <div class="cat-section">
+      <button class="cat-hd" onclick="toggleCat('sport')">
+        <span class="cat-icon">🏏</span>
+        <span class="cat-label">Sport Live Now</span>
+        <span class="cat-count">3 streams</span>
+        <svg class="cat-chevron" id="chv-sport" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="cat-body" id="cb-sport">
+        <div class="csc" onclick="toast('▶ Playing','The Ashes — Radio 5 Live · Day 3')">
+          <div class="csc-art" style="background:linear-gradient(135deg,#1a2a1a,#2a5a2a);">🏏</div>
+          <div class="csc-mid"><div class="csc-name">Radio 5 Live</div><div class="csc-show">The Ashes — Day 3</div><div class="csc-stn">Sport · England vs Australia</div></div>
+          <span class="csc-live"><span class="d"></span>LIVE</span>
+        </div>
+        <div class="csc" onclick="toast('▶ Playing','F1 British GP — Sports Extra')">
+          <div class="csc-art" style="background:linear-gradient(135deg,#2a1a0a,#5a3a1a);">🏎️</div>
+          <div class="csc-mid"><div class="csc-name">BBC Sports Extra</div><div class="csc-show">F1 British GP — Qualifying</div><div class="csc-stn">Sport · Silverstone</div></div>
+          <span class="csc-live"><span class="d"></span>LIVE</span>
+        </div>
+        <div class="csc" onclick="toast('⏰ Later','Wimbledon Centre Court starts 13:00')">
+          <div class="csc-art" style="background:linear-gradient(135deg,#1a2a1a,#2a4a2a);opacity:.6;">🎾</div>
+          <div class="csc-mid"><div class="csc-name">Radio 5 Live</div><div class="csc-show">Wimbledon — Centre Court</div><div class="csc-stn">Sport · 13:00</div></div>
+          <span class="csc-live" style="background:rgba(232,163,42,.2);color:var(--amber);">13:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw & Unfiltered collapsible -->
+    <div class="cat-section">
+      <button class="cat-hd" onclick="toggleCat('news')">
+        <span class="cat-icon">📡</span>
+        <span class="cat-label">Raw &amp; Unfiltered</span>
+        <span class="cat-count">5 feeds</span>
+        <svg class="cat-chevron" id="chv-news" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="cat-body" id="cb-news">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:10px;line-height:1.5;">Behind-the-scenes from BBC studios — unedited, live as it happens.</div>
+        <div style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px 2px;">
+          <div class="raw-feed-card" onclick="openRawViewer(0)"><canvas class="raw-canvas" id="rc0" data-hue="25"></canvas><div class="rfc-overlay"><div class="rfc-top"><span class="rfc-live"><span class="d"></span>RAW</span><span class="rfc-viewers">6.1k</span></div><div class="rfc-bottom"><div class="rfc-name">Live Lounge — studio cam</div><div class="rfc-sub">Charli XCX setup · R1 Exclusive</div></div></div></div>
+          <div class="raw-feed-card" onclick="openRawViewer(1)"><canvas class="raw-canvas" id="rc1" data-hue="260"></canvas><div class="rfc-overlay"><div class="rfc-top"><span class="rfc-live"><span class="d"></span>RAW</span><span class="rfc-viewers">3.4k</span></div><div class="rfc-bottom"><div class="rfc-name">Greg James — pre-show prep</div><div class="rfc-sub">Studio cam · Unfiltered · R1</div></div></div></div>
+          <div class="raw-feed-card" onclick="openRawViewer(2)"><canvas class="raw-canvas" id="rc2" data-hue="0"></canvas><div class="rfc-overlay"><div class="rfc-top"><span class="rfc-live" style="background:rgba(229,53,53,.35)"><span class="d"></span>BREAKING</span><span class="rfc-viewers">28.7k</span></div><div class="rfc-bottom"><div class="rfc-name">BBC Newsroom — Millbank</div><div class="rfc-sub">As it breaks · BBC News</div></div></div></div>
+          <div class="raw-feed-card" onclick="openRawViewer(3)"><canvas class="raw-canvas" id="rc3" data-hue="120"></canvas><div class="rfc-overlay"><div class="rfc-top"><span class="rfc-live"><span class="d"></span>RAW</span><span class="rfc-viewers">9.2k</span></div><div class="rfc-bottom"><div class="rfc-name">TMS — Commentary Box</div><div class="rfc-sub">Off-air chat · The Ashes · R5</div></div></div></div>
+          <div class="raw-feed-card" onclick="openRawViewer(4)"><canvas class="raw-canvas" id="rc4" data-hue="200"></canvas><div class="rfc-overlay"><div class="rfc-top"><span class="rfc-live"><span class="d"></span>RAW</span><span class="rfc-viewers">1.8k</span></div><div class="rfc-bottom"><div class="rfc-name">BBC Weather Centre</div><div class="rfc-sub">Forecast production live</div></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Continue listening — mixed content -->
+    <div class="sh"><h2>Continue Listening</h2></div>
+    <div class="row" onclick="goNav(1)">
+      <div class="row-art" style="background:linear-gradient(135deg,#1a0a00,#110800);">🎵</div>
+      <div class="row-info"><div class="row-title">Charli XCX — Live Lounge</div><div class="row-sub">Brat, 360, Von dutch — performing live now</div><div class="prog-track"><div class="prog-fill" style="width:34%"></div></div></div>
+      <div class="row-play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+    </div>
+    <div class="div"></div>
+    <div class="row" onclick="toast('▶ Resuming','Newscast — The Morgan McSweeney Evidence')">
+      <div class="row-art" style="background:linear-gradient(135deg,#0a1a2a,#1a3a4a);">📣</div>
+      <div class="row-info"><div class="row-title">Newscast</div><div class="row-sub">The Morgan McSweeney Evidence</div><div class="prog-track"><div class="prog-fill" style="width:58%"></div></div></div>
+      <div class="row-play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+    </div>
+    <div class="div"></div>
+    <div class="row" onclick="toast('▶ Resuming','The Spy Who Came in from the Cold — ch. 8')">
+      <div class="row-art" style="background:linear-gradient(135deg,#0a1020,#1a2a40);">🕵️</div>
+      <div class="row-info"><div class="row-title">The Spy Who Came in from the Cold</div><div class="row-sub">John le Carré · narrated by Tom Hollander</div><div class="prog-track"><div class="prog-fill" style="width:55%"></div></div></div>
+      <div class="row-play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+    </div>
+
+    <!-- Trending podcasts -->
+    <div class="sh"><h2>Trending Podcasts</h2><span class="ao">See all</span></div>
+    <div class="hscroll">
+      <div class="hs-card" onclick="toast('▶ Playing','The Rest is Politics — latest')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#0a1a2e,#1a3a5e);box-shadow:none;border:1px solid var(--border);">🗳️</div>
+        <div class="hs-info"><div class="hs-station">Podcast</div><div class="hs-title">The Rest is Politics</div><div class="hs-sub">48 mins · New</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','The Louis Theroux Podcast — Ep 1')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#1a1206,#2a2208);box-shadow:none;border:1px solid var(--border);">🎙️</div>
+        <div class="hs-info"><div class="hs-station">Podcast</div><div class="hs-title">Louis Theroux</div><div class="hs-sub">58 mins · New</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','Desert Island Discs — latest')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#1a0a2e,#2e1050);box-shadow:none;border:1px solid var(--border);">🏝️</div>
+        <div class="hs-info"><div class="hs-station">Radio 4</div><div class="hs-title">Desert Island Discs</div><div class="hs-sub">44 mins</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','Romesh vs — latest')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#1a1a0a,#2a2a14);box-shadow:none;border:1px solid var(--border);">😄</div>
+        <div class="hs-info"><div class="hs-station">Podcast</div><div class="hs-title">Romesh vs</div><div class="hs-sub">31 mins · New</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','In Our Time — latest')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#2a1a0a,#4a2a0e);box-shadow:none;border:1px solid var(--border);">🧠</div>
+        <div class="hs-info"><div class="hs-station">Radio 4</div><div class="hs-title">In Our Time</div><div class="hs-sub">45 mins</div></div>
+      </div>
+    </div>
+
+    <!-- New music -->
+    <div class="sh"><h2>New Music &amp; Sessions</h2><span class="ao">See all</span></div>
+    <div class="hscroll">
+      <div class="hs-card" onclick="toast('▶ Playing','Doja Cat — Live Lounge — 14:00 today')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#2a0a2a,#4a0a5a);box-shadow:none;border:1px solid var(--border);">🎤<div class="hs-badge amber">2h</div></div>
+        <div class="hs-info"><div class="hs-station">Radio 1</div><div class="hs-title">Doja Cat</div><div class="hs-sub">Live Lounge · 14:00</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','James Blunt — In Conversation')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#0a1a2e,#1a3a5e);box-shadow:none;border:1px solid var(--border);">🎸</div>
+        <div class="hs-info"><div class="hs-station">Radio 2</div><div class="hs-title">James Blunt</div><div class="hs-sub">In Conversation · 22 mins</div></div>
+      </div>
+      <div class="hs-card" onclick="toast('▶ Playing','BBC Music Introducing — this week')">
+        <div class="hs-art" style="background:linear-gradient(135deg,#1a0a2e,#3a1a5e);box-shadow:none;border:1px solid var(--border);">📻</div>
+        <div class="hs-info"><div class="hs-station">Introducing</div><div class="hs-title">New Artists 2025</div><div class="hs-sub">Discover · 44 mins</div></div>
+      </div>
+    </div>
+    <div class="scroll-end"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SCREEN 1: LIVE SESSION ══════════════ -->
+  <div class="screen" id="s1">
+
+    <!-- Video/Audio toggle -->
+    <div class="av-toggle">
+      <div class="av-btn on" id="av-audio" onclick="setAVMode('audio')">AUDIO</div>
+      <div class="av-btn" id="av-video" onclick="setAVMode('video')">VIDEO</div>
+    </div>
+
+    <!-- Player: audio canvas (default) -->
+    <div class="player-wrap">
+      <canvas id="player-canvas"></canvas>
+      <!-- Video frame (hidden until VIDEO mode) -->
+      <div class="player-vid-frame" id="vid-frame">
+        <div class="vid-screen">
+          <canvas id="vid-canvas"></canvas>
+          <div class="vid-corner-badge">
+            <div class="vid-live"><span class="d"></span>LIVE</div>
+            <div class="vid-cam-label" id="vid-cam-label">CAM 1 · STAGE</div>
+          </div>
+          <!-- Camera switcher pills inside video -->
+          <div style="position:absolute;bottom:100px;left:18px;right:18px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;">
+            <div class="av-btn on" id="cam0" style="background:rgba(255,107,0,.9);color:#000;border-radius:14px;padding:5px 11px;font-size:10px;cursor:pointer;white-space:nowrap;" onclick="setCam(0)">Stage</div>
+            <div class="av-btn" id="cam1" style="background:rgba(0,0,0,.5);color:rgba(255,255,255,.7);border-radius:14px;padding:5px 11px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,.15);white-space:nowrap;" onclick="setCam(1)">Wide</div>
+            <div class="av-btn" id="cam2" style="background:rgba(0,0,0,.5);color:rgba(255,255,255,.7);border-radius:14px;padding:5px 11px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,.15);white-space:nowrap;" onclick="setCam(2)">Close-up</div>
+            <div class="av-btn" id="cam3" style="background:rgba(0,0,0,.5);color:rgba(255,255,255,.7);border-radius:14px;padding:5px 11px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,.15);white-space:nowrap;" onclick="setCam(3)">Crowd</div>
+            <div class="av-btn" id="cam4" style="background:rgba(0,0,0,.5);color:rgba(255,255,255,.7);border-radius:14px;padding:5px 11px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,.15);white-space:nowrap;" onclick="setCam(4)">Overhead</div>
+          </div>
+        </div>
+      </div>
+      <div class="player-overlay" id="player-overlay"></div>
+      <div class="player-top" id="player-top-bar">
+        <div class="station-badge">
+          <div class="stn-logo">BBC<br><span style="font-size:8px;letter-spacing:0;">RADIO 1</span></div>
+          <div class="stn-info"><span class="stn-name">Live Lounge</span><span class="stn-prog">Charli XCX Session</span></div>
+        </div>
+      </div>
+      <div class="player-bottom">
+        <div class="now-label">Now Playing</div>
+        <div class="now-title" id="now-title">Von dutch</div>
+        <div class="now-sub" id="now-sub">Charli XCX · Brat (2024)</div>
+        <div class="progress-wrap" onclick="scrubProgress(event)">
+          <div class="progress-fill" id="prog-fill"></div>
+          <div class="progress-dot" id="prog-dot"></div>
+        </div>
+        <div class="player-controls">
+          <button class="ctrl-skip" onclick="prevTrack()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/></svg><span>PREV</span>
+          </button>
+          <button class="ctrl-play" id="play-btn" onclick="togglePlay()">
+            <svg viewBox="0 0 24 24" fill="currentColor" id="play-icon"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          </button>
+          <button class="ctrl-skip" onclick="nextTrack()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg><span>NEXT</span>
+          </button>
+          <button class="ctrl-clip" id="flag-btn" onclick="flagMoment()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg><span>CLIP</span>
+          </button>
+          <button class="ctrl-vol" onclick="toast('🔊 Volume','Use device volume controls')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg><span>VOL</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- More from this artist -->
+    <div class="context-surface">
+      <div class="ctx-eyebrow">✦ More from this artist</div>
+      <div class="ctx-title">Charli XCX on the BBC</div>
+      <div class="ctx-sub">Her full archive — surfaced while you listen</div>
+      <div class="ctx-cards">
+        <div class="ctx-card" onclick="toast('▶ Playing','Live Lounge SFV — Charli XCX')">
+          <div class="ctx-card-art" style="background:linear-gradient(135deg,#1a0a00,#280e00);">🎤<span class="ctx-card-type video">Video</span><span class="ctx-card-dur">18:32</span></div>
+          <div class="ctx-card-info"><div class="ctx-card-station">Live Lounge SFV</div><div class="ctx-card-title">Charli XCX Classics</div><div class="ctx-card-sub">Sorted for V's and Wizz</div></div>
+        </div>
+        <div class="ctx-card" onclick="toast('▶ Playing','Glastonbury 2024 — headline set')">
+          <div class="ctx-card-art" style="background:linear-gradient(135deg,#110800,#1a0a00);">🏟️<span class="ctx-card-type video">Video</span><span class="ctx-card-dur">1:47:12</span></div>
+          <div class="ctx-card-info"><div class="ctx-card-station">Glastonbury 2024</div><div class="ctx-card-title">Charli XCX Headline Set</div><div class="ctx-card-sub">The Other Stage · Full show</div></div>
+        </div>
+        <div class="ctx-card" onclick="toast('▶ Playing','BBC Music Introducing — 2013 archive')">
+          <div class="ctx-card-art" style="background:linear-gradient(135deg,#1a0a2e,#2e1050);">📻<span class="ctx-card-type podcast">Podcast</span><span class="ctx-card-dur">24:07</span></div>
+          <div class="ctx-card-info"><div class="ctx-card-station">BBC Introducing</div><div class="ctx-card-title">Charli XCX Archive</div><div class="ctx-card-sub">First BBC session · 2013</div></div>
+        </div>
+        <div class="ctx-card" onclick="toast('▶ Playing','Song Exploder — 360')">
+          <div class="ctx-card-art" style="background:linear-gradient(135deg,#1a1010,#2a1a08);">🎙️<span class="ctx-card-type audio">Audio</span><span class="ctx-card-dur">21:55</span></div>
+          <div class="ctx-card-info"><div class="ctx-card-station">Song Exploder</div><div class="ctx-card-title">Charli XCX: 360</div><div class="ctx-card-sub">How the song was made</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Who is this -->
+    <div class="who-card" id="who-card">
+      <div class="who-top"><div class="who-icon">✦</div><div><div class="who-label">Who is this?</div><div class="who-name">Charli XCX</div></div></div>
+      <div class="who-text">Charli XCX's sixth album <strong style="color:var(--orange);">Brat</strong> became the defining cultural moment of 2024 — a genre-blurring, irreverent club record that became a political rallying cry, a fashion statement, and the sound of a generation. Here's where to start.</div>
+      <div class="who-cta"><button class="who-btn" onclick="startWhoJourney()">Start exploring →</button><span class="who-dismiss" onclick="dismissWho()">Not now</span></div>
+    </div>
+
+    <!-- Trivia -->
+    <div class="trivia-card" id="trivia-card">
+      <div class="trivia-icon">💡</div>
+      <div class="trivia-body"><div class="trivia-label">Did you know</div><div class="trivia-text">Charli XCX wrote most of <strong style="color:var(--orange);">Brat</strong> in a six-week writing camp in London. This is her first live BBC session since her Glastonbury headline set.</div></div>
+      <span class="trivia-dismiss" onclick="dismissTrivia()">×</span>
+    </div>
+
+    <!-- Moment panel -->
+    <div class="moment-panel" id="moment-panel">
+      <div class="moment-top"><span class="moment-label">⚑ Moment Flagged</span><span class="moment-time" id="moment-time">12:34</span></div>
+      <div class="moment-desc" id="moment-desc">Von dutch — Live Lounge</div>
+      <div class="moment-sub">Your clip is being prepared. It'll be ready to share the instant the stream ends.</div>
+      <div class="moment-actions">
+        <button class="moment-save" onclick="toast('🔖 Saved','Moment saved to My Sounds archive')">Save clip</button>
+        <button class="moment-share" onclick="toast('🔗 Shared','Clip link copied to clipboard')">Share</button>
+      </div>
+    </div>
+
+    <!-- Setlist -->
+    <div class="song-explorer" id="song-explorer">
+      <div class="se-header"><span class="se-title">Tonight's Setlist</span><span class="se-badge">Live Lounge</span></div>
+      <div class="se-card" onclick="selectTrack(0)">
+        <div class="se-track-num" id="sn0">01 · PLAYING NOW</div><div class="se-track-name">Von dutch</div><div class="se-track-fact">Lead single from Brat · written in London writing camp</div>
+        <div class="se-play-row"><div class="se-play-btn" id="sp0"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><polygon points="5 3 19 12 5 21 5 3"/></svg>Live now</div><span class="se-dur">3:42</span></div>
+      </div>
+      <div class="se-card" onclick="selectTrack(1)">
+        <div class="se-track-num" id="sn1">02 · UP NEXT</div><div class="se-track-name">360</div><div class="se-track-fact">Over 1 billion streams · Song Exploder episode on Sounds</div>
+        <div class="se-play-row"><div class="se-play-btn" id="sp1" style="color:var(--dim);background:rgba(255,255,255,.05);">Up next</div><span class="se-dur">2:13</span></div>
+      </div>
+      <div class="se-card" onclick="selectTrack(2)">
+        <div class="se-track-num" id="sn2">03</div><div class="se-track-name">Sympathy is a knife</div><div class="se-track-fact">Co-written with A.G. Cook · PC Music collaboration</div>
+        <div class="se-play-row"><div class="se-play-btn" id="sp2" style="color:var(--dim);background:rgba(255,255,255,.05);">Coming up</div><span class="se-dur">3:05</span></div>
+      </div>
+      <div class="se-card" onclick="selectTrack(3)">
+        <div class="se-track-num" id="sn3">04</div><div class="se-track-name">Apple</div><div class="se-track-fact">BBC Radio 1's most played track of 2024</div>
+        <div class="se-play-row"><div class="se-play-btn" id="sp3" style="color:var(--dim);background:rgba(255,255,255,.05);">Coming up</div><span class="se-dur">2:52</span></div>
+      </div>
+    </div>
+
+    <!-- ═══ MAGAZINE IMMERSION LAYER ═══ -->
+    <div class="mag-wrap">
+      <div class="mag-header">
+        <span class="mag-header-title">While you listen</span>
+        <span class="mag-header-sub">Dive deeper</span>
+      </div>
+      <!-- Tab bar -->
+      <div class="mag-tabs">
+        <div class="mag-tab on" id="mt-read"    onclick="setMagTab('read')">Read</div>
+        <div class="mag-tab"    id="mt-listen"  onclick="setMagTab('listen')">Interviews</div>
+        <div class="mag-tab"    id="mt-book"    onclick="setMagTab('book')">Audiobook</div>
+        <div class="mag-tab"    id="mt-play"    onclick="setMagTab('play')">Play Along</div>
+      </div>
+
+      <!-- ── READ panel ── -->
+      <div class="mag-panel on" id="mp-read">
+        <div class="mag-eyebrow">✦ Articles &amp; Features</div>
+
+        <!-- Feature article -->
+        <div class="art-hero" onclick="openArticle('brat')">
+          <div class="art-hero-img" style="background:linear-gradient(135deg,#1a0800,#0e0400);">
+            <canvas class="art-hero-canvas" id="ahc0"></canvas>
+            <span class="art-hero-tag">BBC Music Feature</span>
+          </div>
+          <div class="art-hero-body">
+            <div class="art-hero-source">BBC Music · 2024</div>
+            <div class="art-hero-title">Brat: the album that defined a generation's chaos</div>
+            <div class="art-hero-deck">How Charli XCX's sixth record became a political symbol, a fashion statement, and the sound of 2024 — all from a six-week writing camp in East London.</div>
+            <div class="art-hero-meta">
+              <span class="art-hero-byline">Mark Savage · 8 min read</span>
+              <span class="art-read">Read now →</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strip articles -->
+        <div class="art-strip" onclick="openArticle('glastonbury')">
+          <div class="art-strip-img" style="background:linear-gradient(135deg,#0e0800,#1a0a00);">🏟️</div>
+          <div class="art-strip-body">
+            <div class="art-strip-source">BBC Music</div>
+            <div class="art-strip-title">Charli XCX's Glastonbury: five things we learned</div>
+            <div class="art-strip-meta">Katie Rhydderch · 5 min read · 2024</div>
+          </div>
+        </div>
+
+        <div class="art-strip" onclick="openArticle('brat-summer')">
+          <div class="art-strip-img" style="background:linear-gradient(135deg,#180a00,#240e00);">☀️</div>
+          <div class="art-strip-body">
+            <div class="art-strip-source">BBC Culture</div>
+            <div class="art-strip-title">Brat summer: what does it actually mean?</div>
+            <div class="art-strip-meta">Georgia Billings · 4 min read · 2024</div>
+          </div>
+        </div>
+
+        <div class="art-strip" onclick="openArticle('pc-music')">
+          <div class="art-strip-img" style="background:linear-gradient(135deg,#0a0a1a,#1a1a3a);">🎛️</div>
+          <div class="art-strip-body">
+            <div class="art-strip-source">BBC Music</div>
+            <div class="art-strip-title">PC Music and the sound of hyperpop's mainstream moment</div>
+            <div class="art-strip-meta">Mark Savage · 7 min read · 2023</div>
+          </div>
+        </div>
+
+        <div class="art-strip" onclick="openArticle('360')">
+          <div class="art-strip-img" style="background:linear-gradient(135deg,#1a1010,#2a1a08);">🎙️</div>
+          <div class="art-strip-body">
+            <div class="art-strip-source">BBC Sounds · Song Exploder</div>
+            <div class="art-strip-title">How Charli XCX made 360 — and why it almost didn't exist</div>
+            <div class="art-strip-meta">Podcast transcript · 21 min listen</div>
+          </div>
+        </div>
+
+        <div style="height:16px;"></div>
+      </div>
+
+      <!-- ── INTERVIEWS panel ── -->
+      <div class="mag-panel" id="mp-listen">
+        <div class="mag-eyebrow">✦ Archive Interviews</div>
+
+        <div class="iv-card" onclick="toast('▶ Playing','Radio 1 Breakfast — Charli XCX on Brat · June 2024')">
+          <div class="iv-header">
+            <div class="iv-avatar" style="background:linear-gradient(135deg,#1a0a2e,#3a0a5e);">🎙️</div>
+            <div class="iv-meta">
+              <div class="iv-programme">Radio 1 Breakfast · June 2024</div>
+              <div class="iv-title">"I wanted to make an album that felt like letting go" — Charli XCX on Brat</div>
+              <div class="iv-date">With Greg James · 18 min</div>
+            </div>
+            <div class="iv-type audio">Audio</div>
+          </div>
+          <div class="iv-excerpt">"People keep asking me if it's autobiographical and the answer is yes, completely. Every lyric is something I've either said out loud or been too scared to."</div>
+          <div class="iv-footer"><span class="iv-dur">18:24</span><span class="iv-cta">Listen →</span></div>
+        </div>
+
+        <div class="iv-card" onclick="toast('▶ Playing','Later with Jools Holland — Glastonbury special · 2024')">
+          <div class="iv-header">
+            <div class="iv-avatar" style="background:linear-gradient(135deg,#0e0800,#1a0a00);">📺</div>
+            <div class="iv-meta">
+              <div class="iv-programme">Later… with Jools Holland · BBC Two</div>
+              <div class="iv-title">Charli XCX performs 360 and Von dutch on Later</div>
+              <div class="iv-date">With Jools Holland · 2024</div>
+            </div>
+            <div class="iv-type video">Video</div>
+          </div>
+          <div class="iv-excerpt">An intimate four-song set recorded at Maidstone Studios — the same stage where The Beatles and David Bowie performed decades earlier.</div>
+          <div class="iv-footer"><span class="iv-dur">22:10</span><span class="iv-cta">Watch →</span></div>
+        </div>
+
+        <div class="iv-card" onclick="toast('▶ Playing','6 Music — Lauren Laverne on Brat · 2024')">
+          <div class="iv-header">
+            <div class="iv-avatar" style="background:linear-gradient(135deg,#1a0a2e,#4a0a6e);">6</div>
+            <div class="iv-meta">
+              <div class="iv-programme">6 Music Breakfast · July 2024</div>
+              <div class="iv-title">Charli XCX: "Brat is about being too much, and finally being OK with that"</div>
+              <div class="iv-date">With Lauren Laverne · 24 min</div>
+            </div>
+            <div class="iv-type audio">Audio</div>
+          </div>
+          <div class="iv-excerpt">One of the most candid interviews from the Brat era — Charli discusses the album's political resonance, the writing camp, and her complicated relationship with fame.</div>
+          <div class="iv-footer"><span class="iv-dur">24:07</span><span class="iv-cta">Listen →</span></div>
+        </div>
+
+        <div class="iv-card" onclick="toast('▶ Playing','BBC Music Introducing — 2013 archive')">
+          <div class="iv-header">
+            <div class="iv-avatar" style="background:linear-gradient(135deg,#1a0828,#2e1050);">📻</div>
+            <div class="iv-meta">
+              <div class="iv-programme">BBC Music Introducing · 2013</div>
+              <div class="iv-title">First BBC session — a 21-year-old Charli XCX plays Maida Vale</div>
+              <div class="iv-date">Archive · 2013</div>
+            </div>
+            <div class="iv-type audio">Audio</div>
+          </div>
+          <div class="iv-excerpt">Eleven years before Glastonbury. Four songs, a tiny studio, and the beginning of everything.</div>
+          <div class="iv-footer"><span class="iv-dur">31:45</span><span class="iv-cta">Listen →</span></div>
+        </div>
+
+        <div class="iv-card" onclick="openArticle('brat')">
+          <div class="iv-header">
+            <div class="iv-avatar" style="background:linear-gradient(135deg,#0a1a2e,#1a3a5e);">✍️</div>
+            <div class="iv-meta">
+              <div class="iv-programme">BBC Music · Written interview</div>
+              <div class="iv-title">"Music should make you feel less alone" — an extended Q&amp;A</div>
+              <div class="iv-date">Mark Savage · August 2024</div>
+            </div>
+            <div class="iv-type text">Read</div>
+          </div>
+          <div class="iv-excerpt">Charli XCX in her own words — on critics, on the internet, on why Brat had to sound exactly the way it does.</div>
+          <div class="iv-footer"><span class="iv-dur">12 min read</span><span class="iv-cta">Read →</span></div>
+        </div>
+
+        <div style="height:16px;"></div>
+      </div>
+
+      <!-- ── AUDIOBOOK panel ── -->
+      <div class="mag-panel" id="mp-book">
+        <div class="mag-eyebrow">✦ Recommended Listening</div>
+
+        <!-- Primary audiobook -->
+        <div class="ab-hero" onclick="toast('▶ Playing','Brat — The Story Behind the Album · BBC Sounds')">
+          <div class="ab-cover-row">
+            <div class="ab-cover">📖</div>
+            <div class="ab-info">
+              <div class="ab-label">BBC Sounds Exclusive</div>
+              <div class="ab-title">Brat: The Story Behind the Album</div>
+              <div class="ab-author">Read by the artist · Narrated with archival recordings</div>
+              <div class="ab-stars">★★★★★</div>
+            </div>
+          </div>
+          <div class="ab-desc">A documentary audio experience tracing the making of Brat — from the first session at Metropolis Studios to the Glastonbury headline. Featuring archive recordings, interviews with producers A.G. Cook and Oscar Holter, and Charli XCX reading her own liner notes.</div>
+          <div class="ab-progress-row">
+            <div class="ab-prog-label"><span>Chapter 3 of 8</span><span>1h 12m left</span></div>
+            <div class="ab-prog-bar"><div class="ab-prog-fill"></div></div>
+          </div>
+          <div class="ab-actions">
+            <div class="ab-play-btn" onclick="event.stopPropagation();toast('▶ Resuming','Brat: The Story Behind the Album · Ch. 3')">▶ Continue — Ch. 3</div>
+            <div class="ab-save-btn" onclick="event.stopPropagation();toast('🔖 Saved','Added to My Sounds')">Save</div>
+          </div>
+        </div>
+
+        <!-- Chapters -->
+        <div class="ab-chapters">
+          <div class="ab-ch-header">Chapters</div>
+          <div class="ab-ch" onclick="toast('▶ Playing','Ch. 1 — Before Brat')">
+            <div class="ab-ch-num">01</div>
+            <div class="ab-ch-info"><div class="ab-ch-title" style="color:var(--dim);">Before Brat</div><div class="ab-ch-sub">The years that led here</div></div>
+            <div class="ab-ch-dur">18:32</div>
+            <div class="ab-ch-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          </div>
+          <div class="ab-ch" onclick="toast('▶ Playing','Ch. 2 — The Writing Camp')">
+            <div class="ab-ch-num">02</div>
+            <div class="ab-ch-info"><div class="ab-ch-title" style="color:var(--dim);">The Writing Camp</div><div class="ab-ch-sub">Six weeks in East London</div></div>
+            <div class="ab-ch-dur">22:14</div>
+            <div class="ab-ch-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          </div>
+          <div class="ab-ch current" onclick="toast('▶ Playing','Ch. 3 — 360 and what it meant')">
+            <div class="ab-ch-num">03</div>
+            <div class="ab-ch-info"><div class="ab-ch-title">360 and what it meant</div><div class="ab-ch-sub">The song that changed everything</div></div>
+            <div class="ab-ch-dur">19:07</div>
+            <div class="ab-ch-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          </div>
+          <div class="ab-ch" onclick="toast('▶ Playing','Ch. 4 — Glastonbury')">
+            <div class="ab-ch-num">04</div>
+            <div class="ab-ch-info"><div class="ab-ch-title">Glastonbury</div><div class="ab-ch-sub">The biggest night of her life</div></div>
+            <div class="ab-ch-dur">24:55</div>
+            <div class="ab-ch-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          </div>
+          <div class="ab-ch" onclick="toast('▶ Playing','Ch. 5 — Brat as a political symbol')">
+            <div class="ab-ch-num">05</div>
+            <div class="ab-ch-info"><div class="ab-ch-title">Brat as a political symbol</div><div class="ab-ch-sub">How a colour became a movement</div></div>
+            <div class="ab-ch-dur">16:41</div>
+            <div class="ab-ch-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          </div>
+          <div class="ab-ch" onclick="toast('▶ Playing','Ch. 6 — The collaborators')">
+            <div class="ab-ch-num">06</div>
+            <div class="ab-ch-info"><div class="ab-ch-title">The collaborators</div><div class="ab-ch-sub">A.G. Cook, Oscar Holter and more</div></div>
+            <div class="ab-ch-dur">21:18</div>
+            <div class="ab-ch-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          </div>
+          <div class="ab-ch" onclick="toast('▶ Playing','Ch. 7 — Reception and aftermath')">
+            <div class="ab-ch-num">07</div>
+            <div class="ab-ch-info"><div class="ab-ch-title">Reception and aftermath</div><div class="ab-ch-sub">Critics, fans, the internet</div></div>
+            <div class="ab-ch-dur">17:29</div>
+            <div class="ab-ch-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          </div>
+          <div class="ab-ch" onclick="toast('▶ Playing','Ch. 8 — What comes next')">
+            <div class="ab-ch-num">08</div>
+            <div class="ab-ch-info"><div class="ab-ch-title">What comes next</div><div class="ab-ch-sub">In her own words</div></div>
+            <div class="ab-ch-dur">14:03</div>
+            <div class="ab-ch-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          </div>
+        </div>
+
+        <!-- Second audiobook recommendation -->
+        <div class="mag-eyebrow">Also recommended</div>
+        <div class="art-strip" onclick="toast('▶ Playing','I'm With the Band — Pamela Des Barres')">
+          <div class="art-strip-img" style="background:linear-gradient(135deg,#1a0828,#2e1050);">🎤</div>
+          <div class="art-strip-body">
+            <div class="art-strip-source">Audiobook · BBC Sounds</div>
+            <div class="art-strip-title">I'm With the Band — Pamela Des Barres</div>
+            <div class="art-strip-meta">Read by the author · 9 hrs 14 mins</div>
+          </div>
+        </div>
+        <div class="art-strip" onclick="toast('▶ Playing','Girls to the Front — Sara Marcus')">
+          <div class="art-strip-img" style="background:linear-gradient(135deg,#2a0a1a,#4a1a3a);">📚</div>
+          <div class="art-strip-body">
+            <div class="art-strip-source">Audiobook · BBC Sounds</div>
+            <div class="art-strip-title">Girls to the Front: The True Story of the Riot Grrrl Revolution</div>
+            <div class="art-strip-meta">Sara Marcus · 10 hrs 2 mins</div>
+          </div>
+        </div>
+
+        <div style="height:16px;"></div>
+      </div>
+
+      <!-- ── PLAY ALONG panel ── -->
+      <div class="mag-panel" id="mp-play">
+        <div class="mag-eyebrow">✦ Play Along</div>
+
+        <!-- Live poll 1 -->
+        <div class="pa-card">
+          <div class="pa-header">
+            <span class="pa-eyebrow">Live Poll</span>
+            <span class="pa-count">12,847 responses</span>
+          </div>
+          <div class="pa-q">Which track from tonight's set has hit hardest so far?</div>
+          <div class="pa-options" id="po1">
+            <div class="pa-opt" onclick="vote('po1','o1a',62)"><div class="pa-bar" id="o1a-bar"></div><div class="pa-opt-inner"><span class="pa-opt-label">Von dutch</span><span class="pa-opt-pct" id="o1a-pct">62%</span><span class="pa-opt-tick">✓</span></div></div>
+            <div class="pa-opt" onclick="vote('po1','o1b',18)"><div class="pa-bar" id="o1b-bar"></div><div class="pa-opt-inner"><span class="pa-opt-label">360</span><span class="pa-opt-pct" id="o1b-pct">18%</span><span class="pa-opt-tick">✓</span></div></div>
+            <div class="pa-opt" onclick="vote('po1','o1c',13)"><div class="pa-bar" id="o1c-bar"></div><div class="pa-opt-inner"><span class="pa-opt-label">Sympathy is a knife</span><span class="pa-opt-pct" id="o1c-pct">13%</span><span class="pa-opt-tick">✓</span></div></div>
+            <div class="pa-opt" onclick="vote('po1','o1d',7)"><div class="pa-bar" id="o1d-bar"></div><div class="pa-opt-inner"><span class="pa-opt-label">Apple</span><span class="pa-opt-pct" id="o1d-pct">7%</span><span class="pa-opt-tick">✓</span></div></div>
+          </div>
+          <div class="pa-footer"><span class="pa-voters">12,847 listeners voted</span><span class="pa-live-tag"><span class="d"></span>LIVE</span></div>
+        </div>
+
+        <!-- Prediction -->
+        <div class="pred-card">
+          <div class="pred-eyebrow">🎯 Predict</div>
+          <div class="pred-q">Which song will she close the session with?</div>
+          <div class="pred-opts">
+            <div class="pred-opt" onclick="predict(this,'360')">360</div>
+            <div class="pred-opt" onclick="predict(this,'Apple')">Apple</div>
+            <div class="pred-opt" onclick="predict(this,'Von dutch')">Von dutch again</div>
+            <div class="pred-opt" onclick="predict(this,'A cover')">A surprise cover</div>
+          </div>
+          <div class="pred-footer" id="pred-footer">8,203 predictions so far · Results revealed when the session ends</div>
+        </div>
+
+        <!-- Brat Quiz -->
+        <div class="quiz-card" id="quiz-card">
+          <div class="quiz-header">
+            <span class="quiz-eyebrow">Brat Quiz</span>
+            <div class="quiz-prog-dots" id="quiz-dots"></div>
+          </div>
+          <div class="quiz-q" id="quiz-q"></div>
+          <div class="quiz-opts" id="quiz-opts"></div>
+          <div class="quiz-explain" id="quiz-explain"></div>
+          <div class="quiz-footer">
+            <span class="quiz-score" id="quiz-score">Score: 0 / 4</span>
+            <button class="quiz-next" id="quiz-next" onclick="nextQuizQ()">Next →</button>
+          </div>
+        </div>
+
+        <!-- Setlist hearts -->
+        <div class="setlist-vote">
+          <div class="sv-header"><div class="sv-title">Heart your favourites</div><div class="sv-sub">Show love for the songs you want most</div></div>
+          <div class="sv-item" id="sv0" onclick="heartTrack(0)"><div class="sv-num">01</div><div class="sv-name">Von dutch</div><div class="sv-heart">🤍</div><div class="sv-count" id="sc0">4.2k</div></div>
+          <div class="sv-item" id="sv1" onclick="heartTrack(1)"><div class="sv-num">02</div><div class="sv-name">360</div><div class="sv-heart">🤍</div><div class="sv-count" id="sc1">6.1k</div></div>
+          <div class="sv-item" id="sv2" onclick="heartTrack(2)"><div class="sv-num">03</div><div class="sv-name">Sympathy is a knife</div><div class="sv-heart">🤍</div><div class="sv-count" id="sc2">2.8k</div></div>
+          <div class="sv-item" id="sv3" onclick="heartTrack(3)"><div class="sv-num">04</div><div class="sv-name">Apple</div><div class="sv-heart">🤍</div><div class="sv-count" id="sc3">5.3k</div></div>
+        </div>
+
+        <!-- Live poll 2 -->
+        <div class="pa-card">
+          <div class="pa-header"><span class="pa-eyebrow">Live Poll</span><span class="pa-count">6,492 responses</span></div>
+          <div class="pa-q">Is this your first time hearing Charli XCX live?</div>
+          <div class="pa-options" id="po2">
+            <div class="pa-opt" onclick="vote('po2','o2a',34)"><div class="pa-bar" id="o2a-bar"></div><div class="pa-opt-inner"><span class="pa-opt-label">Yes — first time!</span><span class="pa-opt-pct" id="o2a-pct">34%</span><span class="pa-opt-tick">✓</span></div></div>
+            <div class="pa-opt" onclick="vote('po2','o2b',44)"><div class="pa-bar" id="o2b-bar"></div><div class="pa-opt-inner"><span class="pa-opt-label">No — long-time fan</span><span class="pa-opt-pct" id="o2b-pct">44%</span><span class="pa-opt-tick">✓</span></div></div>
+            <div class="pa-opt" onclick="vote('po2','o2c',22)"><div class="pa-bar" id="o2c-bar"></div><div class="pa-opt-inner"><span class="pa-opt-label">I found her through Brat</span><span class="pa-opt-pct" id="o2c-pct">22%</span><span class="pa-opt-tick">✓</span></div></div>
+          </div>
+          <div class="pa-footer"><span class="pa-voters">6,492 listeners voted</span><span class="pa-live-tag"><span class="d"></span>LIVE</span></div>
+        </div>
+
+        <div style="height:16px;"></div>
+      </div>
+
+    </div><!-- /mag-wrap -->
+
+    <!-- Post session card -->
+    <div class="post-card" id="post-card">
+      <div class="post-art"><canvas id="post-canvas"></canvas>
+        <div class="post-overlay"><div class="post-check">✓</div><div class="post-you-were">You were</div><div class="post-there">there.</div></div>
+      </div>
+      <div class="post-body">
+        <div class="post-stat-row">
+          <div class="post-stat"><div class="post-stat-num">4</div><div class="post-stat-label">Tracks heard</div></div>
+          <div class="post-stat"><div class="post-stat-num">2</div><div class="post-stat-label">Moments flagged</div></div>
+          <div class="post-stat"><div class="post-stat-num">47k</div><div class="post-stat-label">Listened live</div></div>
+        </div>
+        <div class="post-moments-label">Your flagged moments</div>
+        <div><span class="post-moment-chip">⚑ 12:34 — Von dutch</span><span class="post-moment-chip">⚑ 28:17 — Apple</span></div>
+        <div class="post-onward-label">Where next?</div>
+        <div class="post-onward-cards">
+          <div class="poc" onclick="toast('▶ Playing','Glastonbury 2024 headline set')"><div class="poc-icon">🏟️</div><div class="poc-title">Full Glastonbury Set</div><div class="poc-sub">1hr 47 mins · video</div></div>
+          <div class="poc" onclick="toast('▶ Playing','Song Exploder — 360')"><div class="poc-icon">🎙️</div><div class="poc-title">Song Exploder</div><div class="poc-sub">How she made 360</div></div>
+          <div class="poc" onclick="goNav(3)"><div class="poc-icon">🗂️</div><div class="poc-title">My Archive</div><div class="poc-sub">Your live moments</div></div>
+        </div>
+        <div class="post-share-btn" onclick="toast('🔗 Shared','Your Charli XCX moment shared')">Share this moment</div>
+      </div>
+    </div>
+    <div class="scroll-end"></div>
+  </div>
+
+  <!-- ══ ARTICLE MODAL (full-screen overlay) ══ -->
+  <div class="article-modal" id="article-modal">
+    <div class="am-hero-img" id="am-hero">
+      <canvas class="am-hero-canvas" id="am-canvas"></canvas>
+      <div class="am-hero-overlay"></div>
+      <div class="am-hero-content">
+        <div class="am-tag" id="am-tag">BBC Music Feature</div>
+        <div class="am-title" id="am-title">Loading…</div>
+      </div>
+    </div>
+    <div class="am-bar">
+      <span class="am-byline" id="am-byline">BBC Music</span>
+      <button class="am-close" onclick="closeArticle()">✕ Close</button>
+    </div>
+    <div class="am-body" id="am-body"></div>
+    <div class="am-related" id="am-related">
+      <div class="am-rel-label">Listen while you read</div>
+      <div class="am-rel-item" onclick="toast('▶ Playing','Charli XCX — Von dutch · Live Lounge')">
+        <div class="am-rel-icon">🎵</div>
+        <div><div class="am-rel-title">Von dutch — Live Lounge (now playing)</div><div class="am-rel-sub">Radio 1 · Live</div></div>
+      </div>
+      <div class="am-rel-item" onclick="toast('▶ Playing','Song Exploder — 360')">
+        <div class="am-rel-icon">🎙️</div>
+        <div><div class="am-rel-title">Song Exploder: Charli XCX — 360</div><div class="am-rel-sub">Podcast · 21 mins</div></div>
+      </div>
+      <div class="am-rel-item" onclick="toast('▶ Playing','Glastonbury 2024 — full set')">
+        <div class="am-rel-icon">🏟️</div>
+        <div><div class="am-rel-title">Glastonbury 2024 — full headline set</div><div class="am-rel-sub">Video · 1hr 47 mins</div></div>
+      </div>
+    </div>
+    <div class="am-close-bottom"><button onclick="closeArticle()">← Back to Live Session</button></div>
+    <!-- Sticky mini player at bottom -->
+    <div class="am-mini-player">
+      <div class="amp-art">🎵</div>
+      <div class="amp-info">
+        <div class="amp-track" id="amp-track">Von dutch — Charli XCX</div>
+        <div class="amp-station">Radio 1 · Live Lounge · Live</div>
+      </div>
+      <div class="amp-play" onclick="toast('▶ Playing','Charli XCX — Von dutch · Live Lounge')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SCREEN 2: EXPLORE ══════════════ -->
+  <div class="screen" id="s2">
+    <div class="disc-pill-row" style="padding-top:8px;">
+      <button class="disc-pill on" onclick="setDiscPill(this)">For you</button>
+      <button class="disc-pill" onclick="setDiscPill(this)">Music</button>
+      <button class="disc-pill" onclick="setDiscPill(this)">Podcasts</button>
+      <button class="disc-pill" onclick="setDiscPill(this)">Audiobooks</button>
+      <button class="disc-pill" onclick="setDiscPill(this)">News</button>
+      <button class="disc-pill" onclick="setDiscPill(this)">Sport</button>
+      <button class="disc-pill" onclick="setDiscPill(this)">Comedy</button>
+    </div>
+
+    <!-- Featured artist strip -->
+    <div class="artist-strip">
+      <div class="as-art"><canvas id="as-canvas"></canvas>
+        <div class="as-overlay"><div class="as-tag">Live on Radio 1 now</div><div class="as-name">Charli<br>XCX</div><div class="as-year">brat · 2024</div></div>
+      </div>
+    </div>
+
+    <!-- Music -->
+    <div class="sh"><h2>Music</h2><span class="ao">See all</span></div>
+    <div class="hscroll">
+      <div class="hs-card" onclick="toast('▶ Playing','Glastonbury 2024 — Charli XCX')"><div class="hs-art" style="background:linear-gradient(135deg,#0e0800,#1a0a00);box-shadow:none;border:1px solid var(--border);">🏟️</div><div class="hs-info"><div class="hs-station">Glastonbury</div><div class="hs-title">Charli XCX Headline</div><div class="hs-sub">1hr 47 mins · Video</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','Olivia Rodrigo — Live Lounge')"><div class="hs-art" style="background:linear-gradient(135deg,#2a0a2e,#4a1a5e);box-shadow:none;border:1px solid var(--border);">🎤</div><div class="hs-info"><div class="hs-station">Radio 1</div><div class="hs-title">Olivia Rodrigo</div><div class="hs-sub">Live Lounge · 2023</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','Songs from the Castle — playlist')"><div class="hs-art" style="background:linear-gradient(135deg,#1a0828,#2e1050);box-shadow:none;border:1px solid var(--border);">🗡️</div><div class="hs-info"><div class="hs-station">Playlist</div><div class="hs-title">Songs from the Castle</div><div class="hs-sub">24 tracks</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','James Blunt BBC Sessions — Maida Vale')"><div class="hs-art" style="background:linear-gradient(135deg,#0a1a2e,#1a3a5e);box-shadow:none;border:1px solid var(--border);">🎸</div><div class="hs-info"><div class="hs-station">BBC Sessions</div><div class="hs-title">James Blunt</div><div class="hs-sub">Maida Vale · 38 mins</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','Late Night Vibes — playlist')"><div class="hs-art" style="background:linear-gradient(135deg,#0a1020,#1a2a40);box-shadow:none;border:1px solid var(--border);">🌙</div><div class="hs-info"><div class="hs-station">Playlist</div><div class="hs-title">Late Night Vibes</div><div class="hs-sub">18 tracks</div></div></div>
+    </div>
+
+    <!-- Podcasts -->
+    <div class="sh"><h2>Podcasts</h2><span class="ao">See all</span></div>
+    <div class="hscroll">
+      <div class="hs-card" onclick="toast('▶ Playing','The Rest is Politics — latest')"><div class="hs-art" style="background:linear-gradient(135deg,#0a1a2e,#1a3a5e);box-shadow:none;border:1px solid var(--border);">🗳️</div><div class="hs-info"><div class="hs-station">Podcast</div><div class="hs-title">The Rest is Politics</div><div class="hs-sub">48 mins · New</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','Louis Theroux Podcast — S3 Ep1')"><div class="hs-art" style="background:linear-gradient(135deg,#1a1206,#2a2208);box-shadow:none;border:1px solid var(--border);">🎙️</div><div class="hs-info"><div class="hs-station">Podcast</div><div class="hs-title">Louis Theroux</div><div class="hs-sub">58 mins · New</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','Desert Island Discs — latest')"><div class="hs-art" style="background:linear-gradient(135deg,#1a0a2e,#2e1050);box-shadow:none;border:1px solid var(--border);">🏝️</div><div class="hs-info"><div class="hs-station">Radio 4</div><div class="hs-title">Desert Island Discs</div><div class="hs-sub">44 mins</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','Newscast — latest')"><div class="hs-art" style="background:linear-gradient(135deg,#0a1a2a,#1a3a4a);box-shadow:none;border:1px solid var(--border);">📣</div><div class="hs-info"><div class="hs-station">BBC News</div><div class="hs-title">Newscast</div><div class="hs-sub">36 mins · New</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','In Our Time — latest')"><div class="hs-art" style="background:linear-gradient(135deg,#2a1a0a,#4a2a0e);box-shadow:none;border:1px solid var(--border);">🧠</div><div class="hs-info"><div class="hs-station">Radio 4</div><div class="hs-title">In Our Time</div><div class="hs-sub">45 mins</div></div></div>
+    </div>
+
+    <!-- Audiobooks -->
+    <div class="sh"><h2>Audiobooks</h2><span class="ao">See all</span></div>
+    <div class="hscroll">
+      <div class="hs-card" onclick="toast('▶ Playing','The Spy Who Came in from the Cold')"><div class="hs-art" style="background:linear-gradient(135deg,#0a1020,#1a2a40);box-shadow:none;border:1px solid var(--border);">🕵️</div><div class="hs-info"><div class="hs-station">Audiobook</div><div class="hs-title">The Spy Who Came in from the Cold</div><div class="hs-sub">7 hrs 22 mins</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','Under Milk Wood — Michael Sheen')"><div class="hs-art" style="background:linear-gradient(135deg,#1a0a2e,#2e1050);box-shadow:none;border:1px solid var(--border);">🎭</div><div class="hs-info"><div class="hs-station">Audiobook</div><div class="hs-title">Under Milk Wood</div><div class="hs-sub">Michael Sheen · 1hr 45m</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','The Woman in the Window')"><div class="hs-art" style="background:linear-gradient(135deg,#1a0a0a,#3a1a1a);box-shadow:none;border:1px solid var(--border);">🪟</div><div class="hs-info"><div class="hs-station">Audiobook</div><div class="hs-title">The Woman in the Window</div><div class="hs-sub">11 hrs 4 mins</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','War Stories — Ross Kemp')"><div class="hs-art" style="background:linear-gradient(135deg,#1a0808,#3a1010);box-shadow:none;border:1px solid var(--border);">🪖</div><div class="hs-info"><div class="hs-station">Audiobook</div><div class="hs-title">War Stories</div><div class="hs-sub">Ross Kemp · 8 hrs 33m</div></div></div>
+    </div>
+
+    <!-- Comedy -->
+    <div class="sh"><h2>Comedy</h2><span class="ao">See all</span></div>
+    <div class="hscroll">
+      <div class="hs-card" onclick="toast('▶ Playing','Romesh vs — latest')"><div class="hs-art" style="background:linear-gradient(135deg,#1a1a0a,#2a2a14);box-shadow:none;border:1px solid var(--border);">😄</div><div class="hs-info"><div class="hs-station">Podcast</div><div class="hs-title">Romesh vs</div><div class="hs-sub">31 mins · New</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','Frank Skinner — Absolute Radio')"><div class="hs-art" style="background:linear-gradient(135deg,#2a0a2a,#4a1a4a);box-shadow:none;border:1px solid var(--border);">🎭</div><div class="hs-info"><div class="hs-station">Podcast</div><div class="hs-title">Frank Skinner</div><div class="hs-sub">44 mins</div></div></div>
+      <div class="hs-card" onclick="toast('▶ Playing','The News Quiz — latest')"><div class="hs-art" style="background:linear-gradient(135deg,#0a1a2a,#1a3a4a);box-shadow:none;border:1px solid var(--border);">📰</div><div class="hs-info"><div class="hs-station">Radio 4</div><div class="hs-title">The News Quiz</div><div class="hs-sub">28 mins · New</div></div></div>
+    </div>
+
+    <!-- Browse genres grid -->
+    <div class="sh"><h2>Browse</h2></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 18px 18px;">
+      <div style="border-radius:10px;background:linear-gradient(135deg,#1a0828,#0e0818);padding:16px;cursor:pointer;height:80px;display:flex;align-items:flex-end;" onclick="toast('Browsing','News & Current Affairs')"><span style="font-size:14px;font-weight:800;color:#fff;">News &amp;<br>Current Affairs</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#0a1a2e,#0a0a1e);padding:16px;cursor:pointer;height:80px;display:flex;align-items:flex-end;" onclick="toast('Browsing','Drama')"><span style="font-size:14px;font-weight:800;color:#fff;">Drama &amp;<br>Fiction</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#1a2a08,#0a1a08);padding:16px;cursor:pointer;height:80px;display:flex;align-items:flex-end;" onclick="toast('Browsing','Science')"><span style="font-size:14px;font-weight:800;color:#fff;">Science &amp;<br>Nature</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#2a0808,#1a0408);padding:16px;cursor:pointer;height:80px;display:flex;align-items:flex-end;" onclick="toast('Browsing','True Crime')"><span style="font-size:14px;font-weight:800;color:#fff;">True Crime</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#1a1a0a,#0e0e08);padding:16px;cursor:pointer;height:80px;display:flex;align-items:flex-end;" onclick="toast('Browsing','History')"><span style="font-size:14px;font-weight:800;color:#fff;">History</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#0a1a1a,#081818);padding:16px;cursor:pointer;height:80px;display:flex;align-items:flex-end;" onclick="toast('Browsing','Sport')"><span style="font-size:14px;font-weight:800;color:#fff;">Sport</span></div>
+    </div>
+    <div class="scroll-end"></div>
+  </div>
+
+  <!-- ══════════════ SCREEN 3: MY SOUNDS ══════════════ -->
+  <div class="screen" id="s3">
+    <div style="padding:60px 0 0;font-size:22px;font-weight:900;letter-spacing:-.3px;padding-left:18px;color:var(--white);">My Sounds</div>
+
+    <!-- Live archive card -->
+    <div class="sh" style="padding-top:8px;"><h2>Live Archive</h2></div>
+    <div class="archive-card" onclick="goNav(1);setTimeout(()=>showPostCard(),300)">
+      <div class="archive-art"><canvas id="ac-canvas"></canvas><div class="archive-art-overlay"><div class="archive-you-were">You were <span>there</span></div></div></div>
+      <div class="archive-body">
+        <div class="archive-title">Charli XCX — Radio 1 Live Lounge</div>
+        <div class="archive-meta">Today · 10:32 — 10:58 · 47k listening live</div>
+        <div class="archive-moments"><span class="arc-moment">⚑ 12:34 Von dutch</span><span class="arc-moment">⚑ 28:17 Apple</span></div>
+        <div class="archive-actions">
+          <div class="arc-btn primary" onclick="event.stopPropagation();toast('🔗 Shared','Your live archive shared')">Share moments</div>
+          <div class="arc-btn secondary" onclick="event.stopPropagation();toast('▶ Playing','Charli XCX Live Lounge — full session')">Play again</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Continue listening - mixed -->
+    <div class="sh"><h2>Continue Listening</h2></div>
+    <div class="row" onclick="toast('▶ Resuming','Newscast — The Morgan McSweeney Evidence')">
+      <div class="row-art" style="background:linear-gradient(135deg,#0a1a2a,#1a3a4a);">📣</div>
+      <div class="row-info"><div class="row-title">Newscast</div><div class="row-sub">The Morgan McSweeney Evidence</div><div class="prog-track"><div class="prog-fill" style="width:58%"></div></div><div style="font-size:11px;color:var(--dim);margin-top:2px;">14 mins left</div></div>
+      <div class="row-play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+    </div>
+    <div class="div"></div>
+    <div class="row" onclick="toast('▶ Resuming','The Spy Who Came in from the Cold — ch. 8')">
+      <div class="row-art" style="background:linear-gradient(135deg,#0a1020,#1a2a40);">🕵️</div>
+      <div class="row-info"><div class="row-title">The Spy Who Came in from the Cold</div><div class="row-sub">John le Carré · narrated by Tom Hollander</div><div class="prog-track"><div class="prog-fill" style="width:55%"></div></div><div style="font-size:11px;color:var(--dim);margin-top:2px;">3 hrs 14 mins left</div></div>
+      <div class="row-play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+    </div>
+    <div class="div"></div>
+    <div class="row" onclick="toast('▶ Resuming','The Rest is Politics — latest')">
+      <div class="row-art" style="background:linear-gradient(135deg,#0a1a2e,#1a3a5e);">🗳️</div>
+      <div class="row-info"><div class="row-title">The Rest is Politics</div><div class="row-sub">Latest episode</div><div class="prog-track"><div class="prog-fill" style="width:22%"></div></div><div style="font-size:11px;color:var(--dim);margin-top:2px;">37 mins left</div></div>
+      <div class="row-play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+    </div>
+
+    <!-- Saved events -->
+    <div class="sh"><h2>Saved Events</h2></div>
+    <div class="row" style="align-items:center;" onclick="toast('⏰ Tomorrow','Doja Cat Live Lounge — 14:00 today')">
+      <div class="row-art" style="background:linear-gradient(135deg,#2a0a2a,#4a0a5a);">🎤</div>
+      <div class="row-info">
+        <div style="margin-bottom:3px;"><span style="display:inline-flex;align-items:center;background:var(--odim);color:var(--orange);font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;">Today · 14:00</span></div>
+        <div class="row-title" style="font-size:15px;">Doja Cat — Live Lounge</div>
+        <div class="row-sub" style="font-size:12px;margin-bottom:0;">Radio 1 · Live Session</div>
+      </div>
+      <button style="background:var(--odim);color:var(--orange);font-size:11px;font-weight:700;padding:5px 10px;border-radius:16px;border:1px solid rgba(255,107,0,.3);white-space:nowrap;cursor:pointer;">Saved ✓</button>
+    </div>
+    <div class="div"></div>
+    <div class="row" style="align-items:center;" onclick="toast('⏰ Reminder set','Glastonbury 2025 — coverage starts 17:30')">
+      <div class="row-art" style="background:linear-gradient(135deg,#1a2a08,#0a1a04);">🏟️</div>
+      <div class="row-info">
+        <div style="margin-bottom:3px;"><span style="display:inline-flex;align-items:center;background:var(--s2);color:var(--grey);font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;">Friday · 17:30</span></div>
+        <div class="row-title" style="font-size:15px;">Glastonbury 2025</div>
+        <div class="row-sub" style="font-size:12px;margin-bottom:0;">BBC Sounds · Live coverage</div>
+      </div>
+      <button style="background:transparent;color:var(--grey);font-size:11px;font-weight:600;padding:5px 10px;border-radius:16px;border:1.5px solid var(--border);white-space:nowrap;cursor:pointer;">Remind me</button>
+    </div>
+
+    <!-- Saved content -->
+    <div class="sh"><h2>Saved</h2></div>
+    <div class="saved-item" onclick="toast('▶ Playing','Glastonbury 2024 — Charli XCX headline set')"><div class="si-art" style="background:linear-gradient(135deg,#0e0800,#1a0a00);">🏟️</div><div class="si-info"><div class="si-type">Video · Glastonbury</div><div class="si-title">Charli XCX Headline Set</div><div class="si-sub">Saved from Live Lounge discovery · 1hr 47m</div></div></div>
+    <div class="saved-item" onclick="toast('▶ Playing','Desert Island Discs — latest')"><div class="si-art" style="background:linear-gradient(135deg,#1a0a2e,#2e1050);">🏝️</div><div class="si-info"><div class="si-type">Podcast · Radio 4</div><div class="si-title">Desert Island Discs</div><div class="si-sub">Latest episode · 44 mins</div></div></div>
+    <div class="saved-item" onclick="toast('▶ Playing','Under Milk Wood — Michael Sheen')"><div class="si-art" style="background:linear-gradient(135deg,#1a0a2e,#2e1050);">🎭</div><div class="si-info"><div class="si-type">Audiobook · Radio Drama</div><div class="si-title">Under Milk Wood</div><div class="si-sub">Michael Sheen · 1hr 45 mins</div></div></div>
+    <div class="saved-item" onclick="toast('▶ Playing','Song Exploder — Charli XCX: 360')"><div class="si-art" style="background:linear-gradient(135deg,#1a1010,#2a1a08);">🎙️</div><div class="si-info"><div class="si-type">Podcast · Song Exploder</div><div class="si-title">Charli XCX: 360</div><div class="si-sub">Saved during session · 21 mins</div></div></div>
+    <div class="scroll-end"></div>
+  </div>
+
+  <!-- ══════════════ SCREEN 4: SEARCH ══════════════ -->
+  <div class="screen" id="s4">
+    <div class="search-wrap" style="padding-top:16px;">
+      <div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input placeholder="Search BBC Sounds…" id="search-inp" oninput="handleSearch(this.value)"></div>
+      <div class="trending-label">Trending now</div>
+      <div>
+        <span class="trend-chip hot" onclick="searchFor('Charli XCX')">🔥 Charli XCX</span>
+        <span class="trend-chip hot" onclick="searchFor('Newscast')">📣 Newscast</span>
+        <span class="trend-chip" onclick="searchFor('The Ashes')">🏏 The Ashes</span>
+        <span class="trend-chip" onclick="searchFor('Desert Island Discs')">Desert Island Discs</span>
+        <span class="trend-chip" onclick="searchFor('Glastonbury')">Glastonbury</span>
+        <span class="trend-chip" onclick="searchFor('Louis Theroux')">Louis Theroux</span>
+        <span class="trend-chip" onclick="searchFor('Live Lounge')">Live Lounge</span>
+        <span class="trend-chip" onclick="searchFor('The Rest is Politics')">The Rest is Politics</span>
+      </div>
+    </div>
+
+    <!-- Browse by category -->
+    <div class="sh" style="padding-top:4px;"><h2>Browse Categories</h2></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 18px 4px;">
+      <div style="border-radius:10px;background:linear-gradient(135deg,#1a0828,#0e0818);padding:14px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toast('Browsing','Music')"><span style="font-size:22px;">🎵</span><span style="font-size:13px;font-weight:800;color:#fff;">Music</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#0a1a2e,#0a0a20);padding:14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toast('Browsing','Podcasts')"><span style="font-size:22px;">🎙️</span><span style="font-size:13px;font-weight:800;color:#fff;">Podcasts</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#0a1020,#0a1828);padding:14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toast('Browsing','Audiobooks')"><span style="font-size:22px;">📚</span><span style="font-size:13px;font-weight:800;color:#fff;">Audiobooks</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#1a0808,#280808);padding:14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toast('Browsing','News')"><span style="font-size:22px;">📣</span><span style="font-size:13px;font-weight:800;color:#fff;">News</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#1a2a08,#0e1a04);padding:14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toast('Browsing','Sport')"><span style="font-size:22px;">🏆</span><span style="font-size:13px;font-weight:800;color:#fff;">Sport</span></div>
+      <div style="border-radius:10px;background:linear-gradient(135deg,#1a1a0a,#141408);padding:14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toast('Browsing','Comedy')"><span style="font-size:22px;">😄</span><span style="font-size:13px;font-weight:800;color:#fff;">Comedy</span></div>
+    </div>
+
+    <!-- Stations -->
+    <div class="sh"><h2>BBC Stations</h2></div>
+    <div class="row" style="padding:8px 18px;" onclick="toast('▶ Playing','Radio 1 — Live Lounge with Charli XCX')">
+      <div class="row-art" style="width:48px;height:48px;font-size:18px;font-weight:900;background:linear-gradient(135deg,#1a0a2e,#3a0a5e);">1</div>
+      <div class="row-info"><div class="row-title" style="font-size:14px;">BBC Radio 1</div><div class="row-sub" style="font-size:12px;">Live Lounge · Charli XCX</div></div>
+      <span style="font-size:8px;font-weight:800;background:var(--live);color:#fff;padding:3px 6px;border-radius:3px;white-space:nowrap;">LIVE</span>
+    </div>
+    <div class="div"></div>
+    <div class="row" style="padding:8px 18px;" onclick="toast('▶ Playing','Radio 2 — Scott Mills')">
+      <div class="row-art" style="width:48px;height:48px;font-size:18px;font-weight:900;background:linear-gradient(135deg,#1a1206,#3a2a08);">2</div>
+      <div class="row-info"><div class="row-title" style="font-size:14px;">BBC Radio 2</div><div class="row-sub" style="font-size:12px;">Scott Mills · Daytime</div></div>
+      <span style="font-size:8px;font-weight:800;background:var(--live);color:#fff;padding:3px 6px;border-radius:3px;white-space:nowrap;">LIVE</span>
+    </div>
+    <div class="div"></div>
+    <div class="row" style="padding:8px 18px;" onclick="toast('▶ Playing','Radio 4 — The Archers Omnibus')">
+      <div class="row-art" style="width:48px;height:48px;font-size:18px;font-weight:900;background:linear-gradient(135deg,#2a1a40,#4a2a70);">4</div>
+      <div class="row-info"><div class="row-title" style="font-size:14px;">BBC Radio 4</div><div class="row-sub" style="font-size:12px;">The Archers Omnibus</div></div>
+      <span style="font-size:8px;font-weight:800;background:var(--live);color:#fff;padding:3px 6px;border-radius:3px;white-space:nowrap;">LIVE</span>
+    </div>
+    <div class="div"></div>
+    <div class="row" style="padding:8px 18px;" onclick="toast('▶ Playing','6 Music — Mary Anne Hobbs')">
+      <div class="row-art" style="width:48px;height:48px;font-size:18px;font-weight:900;background:linear-gradient(135deg,#1a0a2e,#4a0a6e);">6</div>
+      <div class="row-info"><div class="row-title" style="font-size:14px;">BBC 6 Music</div><div class="row-sub" style="font-size:12px;">Mary Anne Hobbs · Breakfast</div></div>
+      <span style="font-size:8px;font-weight:800;background:var(--live);color:#fff;padding:3px 6px;border-radius:3px;white-space:nowrap;">LIVE</span>
+    </div>
+    <div class="div"></div>
+    <div class="row" style="padding:8px 18px;" onclick="toast('▶ Playing','Radio 5 Live — The Ashes · Day 3')">
+      <div class="row-art" style="width:48px;height:48px;font-size:14px;font-weight:900;background:linear-gradient(135deg,#1a2a1a,#2a5a2a);">5L</div>
+      <div class="row-info"><div class="row-title" style="font-size:14px;">BBC Radio 5 Live</div><div class="row-sub" style="font-size:12px;">The Ashes · Day 3</div></div>
+      <span style="font-size:8px;font-weight:800;background:var(--live);color:#fff;padding:3px 6px;border-radius:3px;white-space:nowrap;">LIVE</span>
+    </div>
+    <div class="scroll-end"></div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bnav">
+    <button class="bn on" id="bn0" onclick="goNav(0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Home</span></button>
+    <button class="bn" id="bn1" onclick="goNav(1)"><div class="bn-pill"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><polygon points="10 8 16 12 10 16 10 8"/></svg><span>LIVE</span></div><div class="live-dot-nav"></div></button>
+    <button class="bn" id="bn2" onclick="goNav(2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>Explore</span></button>
+    <button class="bn" id="bn3" onclick="goNav(3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>My Sounds</span></button>
+    <button class="bn" id="bn4" onclick="goNav(4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>Search</span></button>
+  </div>
+
+  <!-- Raw Viewer Modal -->
+  <div class="raw-modal" id="raw-modal">
+    <div class="raw-dots" id="raw-dots">
+      <div class="raw-dot on" id="rdot0"></div><div class="raw-dot" id="rdot1"></div><div class="raw-dot" id="rdot2"></div><div class="raw-dot" id="rdot3"></div><div class="raw-dot" id="rdot4"></div>
+    </div>
+    <div class="raw-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg><span>SWIPE</span></div>
+  </div>
+
+</div><!-- /device -->
+
+  <!-- subtle prototype label -->
+  <div style="margin-top:20px;font-family:'DM Mono',monospace;font-size:10px;color:#2a2a2a;letter-spacing:1px;text-align:center;text-transform:uppercase;">BBC Sounds · Live Discovery · Interactive Prototype</div>
+
+</div><!-- /page-wrap -->
+
+<script>
+/* ── STATE ─────────────────────────────────────────────── */
+let cur=0, tTm, progVal=34, playing=true, flagged=false, avMode='audio', camIdx=0;
+let trackIdx=0, playerAnimId, heroAnimId, vidAnimId;
+let rawIdx=-1, rawTouchStartY=0, rawModalAnims={};
+let catStates={sport:false,news:false};
+
+const tracks=[
+  {title:'Von dutch',sub:'Charli XCX · Brat (2024)'},
+  {title:'360',sub:'Charli XCX · Brat (2024)'},
+  {title:'Sympathy is a knife',sub:'Charli XCX · Brat (2024)'},
+  {title:'Apple',sub:'Charli XCX · Brat (2024)'},
+];
+const cams=['CAM 1 · STAGE','CAM 2 · WIDE','CAM 3 · CLOSE-UP','CAM 4 · CROWD','CAM 5 · OVERHEAD'];
+const camHues=[25,200,25,60,90];
+
+const rawFeeds=[
+  {name:'Live Lounge — studio cam',sub:'Charli XCX setup · R1 Exclusive',badge:'RAW',hue:25},
+  {name:'Greg James — pre-show prep',sub:'Studio cam · Unfiltered · R1',badge:'RAW',hue:260},
+  {name:'BBC Newsroom — Millbank',sub:'As it breaks · BBC News',badge:'BREAKING',hue:0},
+  {name:'TMS — Commentary Box',sub:'Off-air chat · The Ashes · R5',badge:'RAW',hue:120},
+  {name:'BBC Weather Centre',sub:'Forecast production live',badge:'RAW',hue:200},
+];
+
+/* ── NAV ───────────────────────────────────────────────── */
+function goNav(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.bn').forEach(b=>b.classList.remove('on'));
+  const sc=document.getElementById('s'+n);
+  if(sc){sc.classList.add('on');sc.scrollTop=0;}
+  const bn=document.getElementById('bn'+n);
+  if(bn)bn.classList.add('on');
+  cur=n;
+  if(n===0){initHeroCanvas();initRawCanvases();}
+  if(n===1){initPlayerCanvas();setTimeout(initArtHeroCanvas,300);}
+  if(n===2)initAsCanvas();
+  if(n===3)initAcCanvas();
+}
+function handleScroll(el){document.getElementById('appbar').classList.toggle('solid',el.scrollTop>180);}
+
+/* ── TOAST ─────────────────────────────────────────────── */
+function toast(t,s){
+  const el=document.getElementById('tst');
+  document.getElementById('tt').textContent=t;
+  document.getElementById('ts').textContent=s;
+  el.classList.add('show');clearTimeout(tTm);
+  tTm=setTimeout(()=>el.classList.remove('show'),2700);
+}
+
+/* ── AUDIO/VIDEO TOGGLE ────────────────────────────────── */
+function setAVMode(mode){
+  avMode=mode;
+  document.getElementById('av-audio').classList.toggle('on',mode==='audio');
+  document.getElementById('av-video').classList.toggle('on',mode==='video');
+  const vidFrame=document.getElementById('vid-frame');
+  const playerCanvas=document.getElementById('player-canvas');
+  const overlay=document.getElementById('player-overlay');
+  const topBar=document.getElementById('player-top-bar');
+  if(mode==='video'){
+    vidFrame.classList.add('on');
+    playerCanvas.style.display='none';
+    overlay.style.display='none';
+    topBar.style.display='none';
+    initVidCanvas();
+    toast('📺 Video mode','Charli XCX Live Lounge — switching to camera feed');
+  } else {
+    vidFrame.classList.remove('on');
+    playerCanvas.style.display='block';
+    overlay.style.display='block';
+    topBar.style.display='flex';
+    cancelAnimationFrame(vidAnimId);
+    initPlayerCanvas();
+    toast('🎵 Audio mode','Switched back to audio');
+  }
+}
+
+/* ── CAM SWITCHER ──────────────────────────────────────── */
+function setCam(idx){
+  camIdx=idx;
+  for(let i=0;i<5;i++){
+    const b=document.getElementById('cam'+i);
+    if(!b)continue;
+    if(i===idx){b.style.background='rgba(255,107,0,.9)';b.style.color='#000';b.style.border='none';}
+    else{b.style.background='rgba(0,0,0,.5)';b.style.color='rgba(255,255,255,.7)';b.style.border='1px solid rgba(255,255,255,.15)';}
+  }
+  document.getElementById('vid-cam-label').textContent=cams[idx];
+  cancelAnimationFrame(vidAnimId);
+  initVidCanvas();
+  toast('📷 '+cams[idx],'Camera switched');
+}
+
+/* ── CANVAS: PLAYER (AUDIO) ────────────────────────────── */
+function initPlayerCanvas(){
+  const cv=document.getElementById('player-canvas');
+  if(!cv)return;
+  cv.width=390;cv.height=300;
+  cancelAnimationFrame(playerAnimId);
+  let f=0;
+  (function draw(){
+    playerAnimId=requestAnimationFrame(draw);f++;
+    const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+    ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
+    const b1x=w*.3+Math.sin(f*.013)*w*.25,b1y=h*.4+Math.cos(f*.017)*h*.3;
+    const g1=ctx.createRadialGradient(b1x,b1y,0,b1x,b1y,160);
+    g1.addColorStop(0,'rgba(255,107,0,.18)');g1.addColorStop(1,'transparent');
+    ctx.fillStyle=g1;ctx.fillRect(0,0,w,h);
+    const b2x=w*.72+Math.cos(f*.011)*w*.2,b2y=h*.55+Math.sin(f*.019)*h*.2;
+    const g2=ctx.createRadialGradient(b2x,b2y,0,b2x,b2y,110);
+    g2.addColorStop(0,'rgba(232,163,42,.09)');g2.addColorStop(1,'transparent');
+    ctx.fillStyle=g2;ctx.fillRect(0,0,w,h);
+    const id=ctx.getImageData(0,0,w,h),d=id.data;
+    for(let i=0;i<d.length;i+=16){const n=(Math.random()-.5)*12;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}
+    ctx.putImageData(id,0,0);
+    if(f%80<2){ctx.fillStyle='rgba(255,255,255,.015)';ctx.fillRect(0,(f*3.1)%h,w,1);}
+  })();
+}
+
+/* ── CANVAS: VIDEO ─────────────────────────────────────── */
+function initVidCanvas(){
+  const cv=document.getElementById('vid-canvas');
+  if(!cv)return;
+  cv.width=390;cv.height=300;
+  cancelAnimationFrame(vidAnimId);
+  const hue=camHues[camIdx]||25;
+  let f=0;
+  (function draw(){
+    vidAnimId=requestAnimationFrame(draw);f++;
+    const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+    // Darker base — feels like actual camera footage
+    ctx.fillStyle=`hsl(${hue},20%,6%)`;ctx.fillRect(0,0,w,h);
+    // Stage light simulation
+    const spotlight=ctx.createRadialGradient(w/2+Math.sin(f*.008)*40,h*.35,0,w/2,h*.35,200);
+    spotlight.addColorStop(0,`hsla(${hue+20},60%,65%,.22)`);
+    spotlight.addColorStop(.6,`hsla(${hue},40%,30%,.08)`);
+    spotlight.addColorStop(1,'transparent');
+    ctx.fillStyle=spotlight;ctx.fillRect(0,0,w,h);
+    // Secondary side light
+    const sideL=ctx.createRadialGradient(w*.1,h*.5,0,w*.1,h*.5,140);
+    sideL.addColorStop(0,`hsla(${hue+60},50%,50%,.1)`);sideL.addColorStop(1,'transparent');
+    ctx.fillStyle=sideL;ctx.fillRect(0,0,w,h);
+    // Film grain (heavier than audio)
+    const id=ctx.getImageData(0,0,w,h),d=id.data;
+    for(let i=0;i<d.length;i+=8){const n=(Math.random()-.5)*18;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}
+    ctx.putImageData(id,0,0);
+    // Scan lines (more visible in video mode)
+    if(f%4===0){ctx.fillStyle='rgba(0,0,0,.06)';ctx.fillRect(0,Math.floor(f/4)%h,w,1);}
+    // Timecode HUD
+    ctx.fillStyle='rgba(255,255,255,.25)';ctx.font='bold 9px monospace';
+    const tc=`${String(Math.floor(f/60/60)).padStart(2,'0')}:${String(Math.floor(f/60)%60).padStart(2,'0')}:${String(f%60).padStart(2,'0')}`;
+    ctx.fillText(tc,w-54,h-14);
+    // REC dot
+    if(f%60<30){ctx.fillStyle='#E53535';ctx.beginPath();ctx.arc(w-64,h-17,3,0,Math.PI*2);ctx.fill();}
+  })();
+}
+
+/* ── CANVAS: HOME HERO ─────────────────────────────────── */
+function initHeroCanvas(){
+  const cv=document.getElementById('hero-canvas');
+  if(!cv)return;
+  cv.width=362;cv.height=200;
+  cancelAnimationFrame(heroAnimId);
+  let f=0;
+  (function draw(){
+    heroAnimId=requestAnimationFrame(draw);f++;
+    const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+    ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
+    const bx=w*.4+Math.sin(f*.018)*w*.3,by=h*.5+Math.cos(f*.022)*h*.3;
+    const g=ctx.createRadialGradient(bx,by,0,bx,by,140);
+    g.addColorStop(0,'rgba(255,107,0,.22)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    const id=ctx.getImageData(0,0,w,h),d=id.data;
+    for(let i=0;i<d.length;i+=20){const n=(Math.random()-.5)*10;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}
+    ctx.putImageData(id,0,0);
+  })();
+}
+
+/* ── CANVAS: EXPLORE ARTIST ────────────────────────────── */
+function initAsCanvas(){
+  const cv=document.getElementById('as-canvas');if(!cv)return;
+  cv.width=354;cv.height=160;let f=0;
+  (function draw(){requestAnimationFrame(draw);f++;
+    const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+    ctx.fillStyle='#060400';ctx.fillRect(0,0,w,h);
+    const bx=w*.6+Math.sin(f*.012)*w*.3,by=h*.5+Math.cos(f*.016)*h*.3;
+    const g=ctx.createRadialGradient(bx,by,0,bx,by,180);
+    g.addColorStop(0,'rgba(255,107,0,.28)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+  })();
+}
+
+/* ── CANVAS: MY SOUNDS ARCHIVE ─────────────────────────── */
+function initAcCanvas(){
+  const cv=document.getElementById('ac-canvas');if(!cv)return;
+  cv.width=354;cv.height=100;let f=0;
+  (function draw(){requestAnimationFrame(draw);f++;
+    const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+    ctx.fillStyle='#0e0800';ctx.fillRect(0,0,w,h);
+    const bx=w*.5+Math.sin(f*.014)*w*.4,by=h*.5+Math.cos(f*.018)*h*.4;
+    const g=ctx.createRadialGradient(bx,by,0,bx,by,120);
+    g.addColorStop(0,'rgba(255,107,0,.3)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    const id=ctx.getImageData(0,0,w,h),d=id.data;
+    for(let i=0;i<d.length;i+=12){const n=(Math.random()-.5)*8;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}
+    ctx.putImageData(id,0,0);
+  })();
+}
+
+function initPostCanvas(){
+  const cv=document.getElementById('post-canvas');if(!cv)return;
+  cv.width=354;cv.height=140;let f=0;
+  (function draw(){requestAnimationFrame(draw);f++;
+    const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+    ctx.fillStyle='#0e0800';ctx.fillRect(0,0,w,h);
+    const g=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,200);
+    g.addColorStop(0,'rgba(255,107,0,.2)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    ctx.fillStyle=`rgba(255,107,0,${.4+Math.sin(f*.08)*.3})`;
+    for(let i=0;i<5;i++){
+      const px=(Math.sin(f*.05+i*1.3)*w*.4)+w*.5,py=(Math.cos(f*.07+i*1.1)*h*.3)+h*.5;
+      ctx.beginPath();ctx.arc(px,py,1.5,0,Math.PI*2);ctx.fill();
+    }
+  })();
+}
+
+/* ── RAW FEED mini-canvases ────────────────────────────── */
+function initRawCanvases(){
+  document.querySelectorAll('.raw-canvas').forEach(cv=>{
+    const hue=parseInt(cv.dataset.hue||'25');
+    cv.width=150;cv.height=100;
+    let f=Math.random()*100;
+    (function draw(){
+      requestAnimationFrame(draw);f++;
+      const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+      ctx.fillStyle=`hsl(${hue},30%,5%)`;ctx.fillRect(0,0,w,h);
+      const id=ctx.getImageData(0,0,w,h),d=id.data;
+      for(let i=0;i<d.length;i+=4){const n=(Math.random()-.5)*16;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}
+      ctx.putImageData(id,0,0);
+      const bx=w*.5+Math.sin(f*.015)*w*.3,by=h*.45+Math.cos(f*.019)*h*.25;
+      const blob=ctx.createRadialGradient(bx,by,0,bx,by,55);
+      blob.addColorStop(0,`hsla(${hue},55%,28%,.38)`);blob.addColorStop(1,'transparent');
+      ctx.fillStyle=blob;ctx.fillRect(0,0,w,h);
+      if(f%55<2){ctx.fillStyle='rgba(255,255,255,.025)';ctx.fillRect(0,(f*2.5)%h,w,1);}
+    })();
+  });
+}
+
+/* ── RAW MODAL ─────────────────────────────────────────── */
+function buildRawSlides(){
+  const modal=document.getElementById('raw-modal');
+  modal.querySelectorAll('.raw-slide').forEach(s=>s.remove());
+  rawFeeds.forEach((f,i)=>{
+    const slide=document.createElement('div');
+    slide.className='raw-slide';
+    slide.id='rslide'+i;
+    slide.style.transform=`translateY(${(i)*100}%)`;
+    slide.innerHTML=`
+      <canvas id="rmcv${i}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></canvas>
+      <div class="raw-slide-overlay"></div>
+      <div style="position:absolute;right:12px;bottom:110px;display:flex;flex-direction:column;gap:18px;align-items:center;z-index:10;">
+        <div class="pm-action" onclick="toast('❤️ Liked','Reaction sent to ${f.name}')"><div class="pm-action-icon">🤍</div><div class="pm-action-label">${['6.1k','3.4k','28.7k','9.2k','1.8k'][i]}</div></div>
+        <div class="pm-action" onclick="toast('💬 Comments','Comments for this feed')"><div class="pm-action-icon">💬</div><div class="pm-action-label">${['412','203','1.2k','788','94'][i]}</div></div>
+        <div class="pm-action" onclick="toast('🔗 Shared','Feed link copied')"><div class="pm-action-icon">🔗</div><div class="pm-action-label">Share</div></div>
+      </div>
+      <div class="raw-slide-bottom">
+        <div class="raw-feed-lbl"><span class="d"></span>${f.badge}</div>
+        <div class="raw-feed-name">${f.name}</div>
+        <div class="raw-feed-sub">${f.sub}</div>
+      </div>
+      <button class="raw-close" onclick="closeRawViewer()">✕ Close</button>`;
+    modal.insertBefore(slide,document.getElementById('raw-dots'));
+  });
+  modal.addEventListener('touchstart',e=>{rawTouchStartY=e.touches[0].clientY;},{passive:true,once:false});
+  modal.addEventListener('touchend',e=>{
+    const dy=rawTouchStartY-e.changedTouches[0].clientY;
+    if(Math.abs(dy)>40)goRawSlide(dy>0?rawIdx+1:rawIdx-1);
+  });
+  modal.addEventListener('wheel',e=>{e.preventDefault();goRawSlide(e.deltaY>0?rawIdx+1:rawIdx-1);},{passive:false});
+}
+
+function openRawViewer(idx){
+  buildRawSlides();
+  document.getElementById('raw-modal').classList.add('open');
+  rawIdx=-1;goRawSlide(idx);
+  rawFeeds.forEach((_,i)=>startRawModalCanvas(i,rawFeeds[i].hue));
+}
+function closeRawViewer(){document.getElementById('raw-modal').classList.remove('open');}
+function goRawSlide(n){
+  n=Math.max(0,Math.min(rawFeeds.length-1,n));
+  if(n===rawIdx)return;rawIdx=n;
+  rawFeeds.forEach((_,i)=>{
+    const s=document.getElementById('rslide'+i);if(s)s.style.transform=`translateY(${(i-n)*100}%)`;
+    const d=document.getElementById('rdot'+i);if(d)d.classList.toggle('on',i===n);
+  });
+}
+function startRawModalCanvas(idx,hue){
+  if(rawModalAnims[idx])return;
+  const cv=document.getElementById('rmcv'+idx);if(!cv)return;
+  cv.width=390;cv.height=844;
+  const ctx=cv.getContext('2d');let f=idx*31;
+  rawModalAnims[idx]=true;
+  (function draw(){
+    if(!document.getElementById('raw-modal').classList.contains('open')){rawModalAnims[idx]=false;return;}
+    f++;
+    const w=cv.width,h=cv.height;
+    ctx.fillStyle=`hsl(${hue},35%,5%)`;ctx.fillRect(0,0,w,h);
+    const id=ctx.getImageData(0,0,w,h),d=id.data;
+    for(let i=0;i<d.length;i+=4){const n=(Math.random()-.5)*20;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}
+    ctx.putImageData(id,0,0);
+    const bx=w*.5+Math.sin(f*.015+idx)*w*.28,by=h*.42+Math.cos(f*.019+idx)*h*.2;
+    const blob=ctx.createRadialGradient(bx,by,0,bx,by,220);
+    blob.addColorStop(0,`hsla(${hue},55%,28%,.32)`);blob.addColorStop(1,'transparent');
+    ctx.fillStyle=blob;ctx.fillRect(0,0,w,h);
+    if(f%65<2){ctx.fillStyle='rgba(255,255,255,.028)';ctx.fillRect(0,(f*2.2)%h,w,1);}
+    ctx.fillStyle='rgba(255,255,255,.2)';ctx.font='bold 8px monospace';
+    const tc=`${String(Math.floor(f/3600)).padStart(2,'0')}:${String(Math.floor(f/60)%60).padStart(2,'0')}:${String(f%60).padStart(2,'0')}`;
+    ctx.fillText(tc,w-52,h-24);
+    if(f%60<30){ctx.fillStyle='#E53535';ctx.beginPath();ctx.arc(w-60,h-27,3,0,Math.PI*2);ctx.fill();}
+    requestAnimationFrame(draw);
+  })();
+}
+
+/* ── CAT TOGGLE ────────────────────────────────────────── */
+function toggleCat(id){
+  catStates[id]=!catStates[id];
+  document.getElementById('cb-'+id).classList.toggle('open',catStates[id]);
+  document.getElementById('chv-'+id).classList.toggle('open',catStates[id]);
+}
+
+/* ── PLAYER ────────────────────────────────────────────── */
+function togglePlay(){
+  playing=!playing;
+  const icon=document.getElementById('play-icon');
+  if(playing){icon.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';toast('▶ Playing','Charli XCX — Live Lounge');}
+  else{icon.innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';toast('⏸ Paused','Tap to resume');}
+}
+function updateProgress(){
+  const fill=document.getElementById('prog-fill'),dot=document.getElementById('prog-dot');
+  if(fill)fill.style.width=progVal+'%';
+  if(dot)dot.style.left=progVal+'%';
+}
+function selectTrack(idx){
+  trackIdx=idx;progVal=idx===0?34:0;
+  document.getElementById('now-title').textContent=tracks[idx].title;
+  document.getElementById('now-sub').textContent=tracks[idx].sub;
+  updateProgress();
+  for(let i=0;i<4;i++){
+    const sn=document.getElementById('sn'+i),sp=document.getElementById('sp'+i);
+    if(sn)sn.textContent=i===idx?`0${i+1} · PLAYING NOW`:i===idx+1?`0${i+1} · UP NEXT`:`0${i+1}`;
+    if(sp){
+      if(i===idx){sp.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><polygon points="5 3 19 12 5 21 5 3"/></svg>Live now';sp.style.color='var(--orange)';sp.style.background='rgba(255,107,0,.12)';}
+      else if(i===idx+1){sp.innerHTML='Up next';sp.style.color='var(--dim)';sp.style.background='rgba(255,255,255,.05)';}
+      else{sp.innerHTML='Coming up';sp.style.color='var(--dim)';sp.style.background='rgba(255,255,255,.05)';}
+    }
+  }
+  toast('▶ Now playing',tracks[idx].title+' — Charli XCX');
+}
+function nextTrack(){if(trackIdx<3)selectTrack(trackIdx+1);else toast('✓ Session ended','That was the full Live Lounge set');}
+function prevTrack(){if(trackIdx>0)selectTrack(trackIdx-1);else toast('◀ Start of set','You\'re at the beginning');}
+function scrubProgress(e){
+  const rect=e.currentTarget.getBoundingClientRect();
+  progVal=Math.max(0,Math.min(100,Math.round(((e.clientX-rect.left)/rect.width)*100)));
+  updateProgress();
+}
+
+/* ── FLAG ───────────────────────────────────────────────── */
+function flagMoment(){
+  flagged=!flagged;
+  document.getElementById('flag-btn').classList.toggle('clipped',flagged);
+  const panel=document.getElementById('moment-panel');
+  if(flagged){
+    panel.classList.add('visible');
+    const now=new Date();
+    document.getElementById('moment-time').textContent=now.getMinutes()+':'+String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('moment-desc').textContent=tracks[trackIdx].title+' — Live Lounge';
+    toast('✂️ Clip saved','Your moment is ready to share when the session ends');
+    document.getElementById('s1').scrollBy({top:200,behavior:'smooth'});
+  } else {panel.classList.remove('visible');toast('✂️ Clip removed','Moment unclipped');}
+}
+
+/* ── WHO / TRIVIA ───────────────────────────────────────── */
+function dismissWho(){document.getElementById('who-card').style.display='none';toast('Dismissed','Find this in Explore anytime');}
+function startWhoJourney(){document.getElementById('who-card').style.display='none';goNav(2);toast('✦ Exploring','Charli XCX — full BBC archive');}
+function dismissTrivia(){document.getElementById('trivia-card').style.display='none';}
+
+/* ── POST CARD ──────────────────────────────────────────── */
+function showPostCard(){
+  const card=document.getElementById('post-card');card.classList.add('visible');
+  card.scrollIntoView({behavior:'smooth',block:'center'});
+  initPostCanvas();toast('✓ Session ended','Your live moments are saved');
+}
+
+/* ── EXPLORE / SEARCH ───────────────────────────────────── */
+function setDiscPill(el){document.querySelectorAll('.disc-pill').forEach(p=>p.classList.remove('on'));el.classList.add('on');toast('Filtering by',el.textContent.trim());}
+function handleSearch(v){if(v.length>2)toast('🔍 Searching','Results for: '+v);}
+function searchFor(q){document.getElementById('search-inp').value=q;goNav(4);toast('🔍 Results for',q);}
+
+
+/* ── MAGAZINE TABS ──────────────────────────────────────── */
+function setMagTab(id){
+  ['read','listen','book','play'].forEach(t=>{
+    document.getElementById('mt-'+t).classList.toggle('on',t===id);
+    document.getElementById('mp-'+t).classList.toggle('on',t===id);
+  });
+  if(id==='read') initArtHeroCanvas();
+  if(id==='play') initQuiz();
+}
+
+/* ── ARTICLE HERO CANVAS (small) ─────────────────────────── */
+function initArtHeroCanvas(){
+  const cv=document.getElementById('ahc0');if(!cv)return;
+  cv.width=354;cv.height=150;let f=0;
+  (function draw(){requestAnimationFrame(draw);f++;
+    const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+    ctx.fillStyle='#0e0400';ctx.fillRect(0,0,w,h);
+    const bx=w*.5+Math.sin(f*.014)*w*.3,by=h*.5+Math.cos(f*.018)*h*.35;
+    const g=ctx.createRadialGradient(bx,by,0,bx,by,120);
+    g.addColorStop(0,'rgba(255,107,0,.24)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    const id=ctx.getImageData(0,0,w,h),d=id.data;
+    for(let i=0;i<d.length;i+=16){const n=(Math.random()-.5)*14;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}
+    ctx.putImageData(id,0,0);
+  })();
+}
+
+/* ── ARTICLE CONTENT DATA ────────────────────────────────── */
+const articles={
+  brat:{
+    tag:'BBC Music Feature · 2024',
+    title:'Brat: the album that defined a generation\'s chaos',
+    byline:'Mark Savage · 8 min read · BBC Music',
+    hue:25,
+    body:`<p>On 7 June 2024, Charli XCX released her sixth studio album with minimal fanfare and a very specific shade of green. Within weeks, that colour — and the word printed across it — had become one of the most loaded cultural signifiers of the year.</p>
+<div class="am-pull">"I wanted to make something that felt reckless. Like it was recorded at 3am and no one was allowed to tell me it was too much."</div>
+<p>Brat was made in a six-week writing camp in East London, a pressure-cooker environment that Charli XCX has described as "the most creatively free I've ever felt." Working closely with producers A.G. Cook and Oscar Holter, she stripped back the arrangements, pushed the BPMs up, and let the lyrics land raw and unedited.</p>
+<h3>A record born from honesty</h3>
+<p>What distinguishes Brat from its predecessors isn't just sonic ambition — it's the willingness to be unflattering. Tracks like Sympathy is a knife and I think about it all the time deal in insecurity, jealousy and anxiety with a directness that pop rarely permits itself.</p>
+<blockquote>"Every lyric is something I've either said out loud or been too scared to. There's no character here. It's just me."</blockquote>
+<p>The critical reception was immediate and overwhelming. By the end of 2024, Brat had topped year-end lists from publications that rarely agree on anything. It became shorthand — first among music journalists, then among politicians, then among people who had never heard of PC Music.</p>
+<h3>When pop becomes politics</h3>
+<p>The moment Kamala Harris's campaign adopted the brat green aesthetic, something shifted. Charli XCX posted "kamala IS brat" and the internet caught fire. It was a collision of sincerity and irony that felt entirely of its moment — a pop star's aesthetic becoming a rallying cry, not by design, but by cultural resonance.</p>
+<p>Whether that political chapter was comfortable territory for the artist herself is another question. What's clear is that Brat the album had done something genuinely rare: it meant something different to everyone who heard it, and those meanings didn't cancel each other out.</p>`
+  },
+  glastonbury:{
+    tag:'BBC Music · Glastonbury 2024',
+    title:'Charli XCX\'s Glastonbury: five things we learned',
+    byline:'Katie Rhydderch · 5 min read · BBC Music',
+    hue:15,
+    body:`<p>The Other Stage. Saturday night. A crowd of 80,000 that had been building all day. This is what Charli XCX has been working towards since her first Maida Vale session in 2013, and she didn't waste a second of it.</p>
+<h3>1. She's learned how to command a crowd</h3>
+<p>Early in her career, Charli XCX's live shows were praised for energy but occasionally criticised for chaos. At Glastonbury, there was control behind every moment of apparent abandon. The set was paced like a film, rising and releasing in exactly the right places.</p>
+<div class="am-pull">"This is the best night of my life," she told the crowd after the third song. Nobody doubted her.</div>
+<h3>2. Brat sounds enormous outdoors</h3>
+<p>The album's production was designed for small rooms and late nights. Played through festival rigs across the Somerset countryside, it took on a different quality entirely — bigger, harder, more euphoric. Von dutch in particular felt like a different song at that volume.</p>
+<h3>3. The BBC broadcast reached 4.7 million viewers</h3>
+<p>The overnight BBC Two broadcast of the set drew the biggest Glastonbury audience since Adele's 2016 headline slot. It sat on BBC iPlayer for seven days and accumulated another 3.2 million streams — making it the most-watched artist set of the festival weekend.</p>`
+  },
+  'brat-summer':{
+    tag:'BBC Culture · 2024',
+    title:'Brat summer: what does it actually mean?',
+    byline:'Georgia Billings · 4 min read · BBC Culture',
+    hue:30,
+    body:`<p>Hot girl summer had Megan Thee Stallion. Soft life had TikTok wellness influencers. And now, brat summer has Charli XCX — and apparently everyone else who has ever felt slightly too loud for the room they were in.</p>
+<p>The phrase arrived with the album, embedded in its artwork and aesthetic: a deliberately cheap-looking chartreuse green, block capitals, no ornamentation. Anti-luxury. Anti-aspiration. A two-fingered salute to the polished Instagram aesthetics that have defined aspirational culture for a decade.</p>
+<h3>What "brat" actually means</h3>
+<blockquote>"It's that girl who is a little messy and likes to party and maybe says some things that she'll regret later... It's just like, a vibe."— Charli XCX</blockquote>
+<p>It's a reclamation of the word as a category of self-possession rather than a character flaw. To be brat is to be unashamed of your contradictions — confident and insecure, indulgent and self-aware, glamorous and chaotic.</p>
+<p>The aesthetic spread far beyond its musical origins. By August 2024, the brat green had appeared in campaign materials, fashion lookbooks, and brand activations from companies who had spent years cultivating the exact opposite of the brat sensibility. The irony was not lost on anyone.</p>`
+  },
+  'pc-music':{
+    tag:'BBC Music · 2023',
+    title:'PC Music and the sound of hyperpop\'s mainstream moment',
+    byline:'Mark Savage · 7 min read · BBC Music',
+    hue:220,
+    body:`<p>A.G. Cook founded PC Music in 2013 in a London bedroom. The label's sound — hyper-processed vocals, squealing synths, pop structures pushed to the point of abstraction — found its first mainstream audiences through a handful of cult YouTube releases and a dedicated online following.</p>
+<p>A decade later, that sound is everywhere. The hyperpop aesthetic that PC Music pioneered has filtered into mainstream pop, film scores, video game soundtracks, and advertising. Charli XCX, who has collaborated with Cook since 2014, has been the most visible ambassador of the sound's crossover.</p>
+<h3>From underground to Glastonbury</h3>
+<p>The journey from a bedroom label releasing deliberately alienating music to soundtracking a Glastonbury headline set represents one of the stranger trajectories in recent pop history. Cook's production on Brat — present on Sympathy is a knife and 360 in particular — retains its abrasive edges while achieving something close to anthemic.</p>
+<blockquote>"We never made this music to be accessible. We made it to be honest. The fact that it became accessible is because the culture moved, not because we changed." — A.G. Cook</blockquote>
+<p>That cultural shift is real, and it maps neatly onto a broader change in how listeners relate to production values. The clean, warmly mixed sound that dominated streaming in the late 2010s has given way to something rougher, stranger, less polished — and PC Music was ahead of that curve by ten years.</p>`
+  },
+  '360':{
+    tag:'BBC Sounds · Song Exploder Transcript',
+    title:'How Charli XCX made 360 — and why it almost didn\'t exist',
+    byline:'Transcript · Song Exploder · 21 min listen',
+    hue:40,
+    body:`<p><em>The following is an edited transcript of the Song Exploder episode in which Charli XCX breaks down the making of 360, track by track, stem by stem. You can listen to the full episode on BBC Sounds.</em></p>
+<h3>The opening</h3>
+<p>"The first thing we had was the drum pattern. Oscar [Holter] played it and I remember thinking — that's it, that's the whole song, it's in that rhythm. Everything else came from trying to build something worthy of it."</p>
+<h3>The hook</h3>
+<blockquote>"I wrote the hook in literally four minutes. I walked out of the vocal booth and said 'I think that's it' and Oscar said 'yeah, obviously that's it.' It was one of those moments where you know immediately."</blockquote>
+<div class="am-pull">"360 is about being perceived. It's about the anxiety of being watched and the desire to be watched at the same time."</div>
+<h3>Why it almost didn't make the album</h3>
+<p>"There was a version of Brat that didn't have 360 on it. I thought it was too obvious, too immediate. The rest of the album sits in more uncomfortable places and I worried 360 would tip the balance toward something people expected from me. A.G. talked me out of cutting it. He was right."</p>
+<p>The track went on to accumulate over one billion streams. It became the most-played song on BBC Radio 1 in 2024. The album version runs two minutes and thirteen seconds. There is not a wasted note.</p>`
+  }
+};
+
+/* ── ARTICLE MODAL ───────────────────────────────────────── */
+let artCanvasAnim;
+function openArticle(id){
+  const a=articles[id];if(!a)return;
+  document.getElementById('am-tag').textContent=a.tag;
+  document.getElementById('am-title').textContent=a.title;
+  document.getElementById('am-byline').textContent=a.byline;
+  document.getElementById('am-body').innerHTML=a.body;
+  document.getElementById('amp-track').textContent=tracks[trackIdx]?.title+' — Charli XCX'||'Von dutch — Charli XCX';
+  const modal=document.getElementById('article-modal');
+  modal.classList.add('open');
+  modal.scrollTop=0;
+  cancelAnimationFrame(artCanvasAnim);
+  initArticleCanvas(a.hue||25);
+}
+function closeArticle(){
+  document.getElementById('article-modal').classList.remove('open');
+  cancelAnimationFrame(artCanvasAnim);
+}
+function initArticleCanvas(hue){
+  const cv=document.getElementById('am-canvas');if(!cv)return;
+  cv.width=390;cv.height=200;let f=0;
+  (function draw(){
+    artCanvasAnim=requestAnimationFrame(draw);f++;
+    const w=cv.width,h=cv.height,ctx=cv.getContext('2d');
+    ctx.fillStyle=`hsl(${hue},40%,4%)`;ctx.fillRect(0,0,w,h);
+    const bx=w*.5+Math.sin(f*.013)*w*.25,by=h*.5+Math.cos(f*.017)*h*.3;
+    const g=ctx.createRadialGradient(bx,by,0,bx,by,160);
+    g.addColorStop(0,`hsla(${hue},70%,45%,.22)`);g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    const id=ctx.getImageData(0,0,w,h),d=id.data;
+    for(let i=0;i<d.length;i+=16){const n=(Math.random()-.5)*12;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}
+    ctx.putImageData(id,0,0);
+  })();
+}
+
+/* ── POLLS ───────────────────────────────────────────────── */
+const votedPolls={};
+function vote(pollId, optId, pct){
+  if(votedPolls[pollId]) return;
+  votedPolls[pollId]=optId;
+  const container=document.getElementById(pollId);
+  if(!container) return;
+  const opts=container.querySelectorAll('.pa-opt');
+  // Mark all as voted, set bar widths
+  const pollBars={
+    po1:{o1a:62,o1b:18,o1c:13,o1d:7},
+    po2:{o2a:34,o2b:44,o2c:22}
+  };
+  const barData=pollBars[pollId]||{};
+  opts.forEach(opt=>{
+    const fn=opt.getAttribute('onclick')||'';
+    const m=fn.match(/'([^']+)',(\d+)\)$/);
+    if(!m) return;
+    const id=m[1],barW=barData[id]||0;
+    opt.classList.add('voted');
+    const bar=document.getElementById(id+'-bar');
+    const pctEl=document.getElementById(id+'-pct');
+    if(bar) setTimeout(()=>bar.style.width=barW+'%',50);
+    if(pctEl) pctEl.textContent=barW+'%';
+    if(id===optId) opt.classList.add('winner');
+  });
+  toast('✅ Vote counted','Thanks — results update live');
+}
+
+/* ── PREDICTION ──────────────────────────────────────────── */
+function predict(el,label){
+  if(el.classList.contains('chosen')) return;
+  document.querySelectorAll('.pred-opt').forEach(o=>o.classList.remove('chosen'));
+  el.classList.add('chosen');
+  document.getElementById('pred-footer').textContent='Your prediction: '+label+' · Results revealed when the session ends';
+  toast('🎯 Predicted!',label+' — see if you\'re right after the session');
+}
+
+/* ── QUIZ ────────────────────────────────────────────────── */
+const quizQs=[
+  {q:'In which city did Charli XCX write most of Brat?',opts:['New York','Los Angeles','London','Berlin'],correct:2,explain:'Brat was written in a six-week writing camp in East London in 2023.'},
+  {q:'How many studio albums had Charli XCX released before Brat?',opts:['Three','Four','Five','Six'],correct:2,explain:'Brat is her sixth studio album. Her debut True Romance came out in 2013.'},
+  {q:'Which producer co-created the Brat sound with Charli XCX?',opts:['Max Martin','A.G. Cook','Pharrell Williams','Diplo'],correct:1,explain:'A.G. Cook of PC Music has been Charli\'s key creative collaborator since 2014.'},
+  {q:'What colour is the Brat album artwork?',opts:['Lime green','Electric blue','Hot pink','Acid yellow'],correct:0,explain:'The iconic chartreuse / lime green became one of the most recognised album aesthetics of 2024.'},
+];
+let quizIdx=0, quizScore=0, quizDone=false;
+
+function initQuiz(){
+  if(quizDone) return;
+  quizIdx=0; quizScore=0;
+  renderQuizQ();
+}
+function renderQuizQ(){
+  const q=quizQs[quizIdx];
+  if(!q) return showQuizResult();
+  document.getElementById('quiz-q').textContent=q.q;
+  document.getElementById('quiz-explain').textContent='';
+  document.getElementById('quiz-explain').classList.remove('show');
+  document.getElementById('quiz-next').classList.remove('show');
+  document.getElementById('quiz-score').textContent='Score: '+quizScore+' / '+quizQs.length;
+  // Dots
+  const dotsEl=document.getElementById('quiz-dots');
+  dotsEl.innerHTML=quizQs.map((_,i)=>`<div class="quiz-prog-dot ${i<quizIdx?'done':i===quizIdx?'cur':''}"></div>`).join('');
+  // Options
+  const optsEl=document.getElementById('quiz-opts');
+  optsEl.innerHTML=q.opts.map((o,i)=>`<button class="quiz-opt" onclick="answerQuiz(${i})">${o}</button>`).join('');
+}
+function answerQuiz(chosen){
+  const q=quizQs[quizIdx];
+  const btns=document.querySelectorAll('.quiz-opt');
+  btns.forEach((b,i)=>{
+    b.disabled=true;
+    if(i===q.correct) b.classList.add('correct');
+    else if(i===chosen && chosen!==q.correct) b.classList.add('wrong');
+  });
+  const correct=chosen===q.correct;
+  if(correct) quizScore++;
+  document.getElementById('quiz-explain').textContent=q.explain;
+  document.getElementById('quiz-explain').classList.add('show');
+  document.getElementById('quiz-next').classList.add('show');
+  document.getElementById('quiz-score').textContent='Score: '+quizScore+' / '+quizQs.length;
+  toast(correct?'✅ Correct!':'❌ Not quite',q.explain.split('.')[0]);
+}
+function nextQuizQ(){
+  quizIdx++;
+  if(quizIdx>=quizQs.length) showQuizResult();
+  else renderQuizQ();
+}
+function showQuizResult(){
+  quizDone=true;
+  const el=document.getElementById('quiz-card');
+  const pct=Math.round((quizScore/quizQs.length)*100);
+  const msg=pct===100?'Perfect score! You know Brat inside out 🌟':pct>=75?'Impressive — a proper fan 🎵':pct>=50?'Not bad — keep exploring 📻':'Time to dive deeper into the archive 👂';
+  el.innerHTML=`
+    <div class="quiz-header"><span class="quiz-eyebrow">Brat Quiz — Complete</span></div>
+    <div style="padding:20px 16px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:6px;">${pct===100?'🌟':pct>=75?'🎵':pct>=50?'📻':'👂'}</div>
+      <div style="font-size:24px;font-weight:900;color:var(--orange);font-family:var(--font-m);">${quizScore} / ${quizQs.length}</div>
+      <div style="font-size:13px;color:var(--white);margin:8px 0 4px;font-weight:700;">${msg}</div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:16px;">Listen to the Brat audiobook and interviews to go even deeper.</div>
+      <button onclick="quizDone=false;initQuiz()" style="background:rgba(255,107,0,.12);color:var(--orange);font-size:12px;font-weight:800;padding:8px 20px;border-radius:20px;border:1px solid rgba(255,107,0,.2);cursor:pointer;">Play again</button>
+    </div>`;
+}
+
+/* ── SETLIST HEARTS ──────────────────────────────────────── */
+const heartCounts=[4200,6100,2800,5300];
+const hearted=[false,false,false,false];
+function heartTrack(i){
+  if(hearted[i]) return;
+  hearted[i]=true;
+  const item=document.getElementById('sv'+i);
+  const countEl=document.getElementById('sc'+i);
+  item.classList.add('hearted');
+  item.querySelector('.sv-heart').textContent='🧡';
+  heartCounts[i]++;
+  const n=heartCounts[i];
+  countEl.textContent=n>=1000?(n/1000).toFixed(1)+'k':n;
+  toast('🧡 Loved','Your reaction is live');
+}
+
+/* ── INIT ───────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded',()=>{
+  goNav(0);
+  updateProgress();
+  setInterval(()=>{if(playing&&cur===1){progVal=Math.min(100,progVal+.08);updateProgress();}},400);
+});
+</script>
+</body>
+</html>
